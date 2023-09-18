@@ -34,7 +34,7 @@ public static class TagsManager
     }
 
     [CanBeNull]
-    public static List<Tag> GetPredictedTagsFromResult(string result)
+    public static List<Tag> GetPredictedTagsFromResult(string result, int depthMapHeight, int depthMapWidth)
     {
         ci.NumberFormat.CurrencyDecimalSeparator = ".";
 
@@ -63,11 +63,21 @@ public static class TagsManager
         {
             var name = new Name(tagNames[i]);
             var probability = probabilities[i];
-            var boundingBox = new BoundingBox(leftSides[i], topSides[i], widths[i], heights[i]);
+            var boundingBox = ConvertToBoundingBox(leftSides[i], topSides[i], widths[i], heights[i], depthMapHeight, depthMapWidth);
             var tag = new Tag(name, probability, boundingBox);
             predictedTags.Add(tag);
         }
         return predictedTags;
+    }
+
+    private static BoundingBox ConvertToBoundingBox(float leftSide, float topSide, float width, float height, int depthMapHeight, int depthMapWidth)
+    {
+        var left = (int) (leftSide * depthMapWidth);
+        var right =  left + (int) (width * depthMapWidth);
+        var top = (int) (topSide * depthMapHeight);
+        var bottom = top + (int) (height * depthMapHeight);
+
+        return new BoundingBox(left, right, top, bottom);
     }
 
     private static bool VerifyAllPropertiesHaveEqualElements(int numberOfObjects, List<string> tagNames, List<float> leftSides, List<float> topSides, List<float> widths, List<float> heights)

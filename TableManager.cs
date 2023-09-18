@@ -18,7 +18,7 @@ public class TableManager : MonoBehaviour
 
 
     private string storageAccountName = "msstorageresource";
-    private string tableTagsName = "Tags";
+    private string tableTagsName = "PredictedTags";
     private string tableRuntimesName = "Runtimes";
 
     private string storageAccountKey =
@@ -120,9 +120,10 @@ public class TableManager : MonoBehaviour
                              $"\"Name\":\"{tag.Name.Get()}\"," +
                              $"\"Confidence\":{tag.Probability}," +
                              $"\"Left\":{tag.BoundingBox.Left}," +
+                             $"\"Right\":{tag.BoundingBox.Right}," +
                              $"\"Top\":{tag.BoundingBox.Top}," +
-                             $"\"Width\":{tag.BoundingBox.Width}," +
-                             $"\"Height\":{tag.BoundingBox.Height}," +
+                             $"\"Bottom\":{tag.BoundingBox.Bottom}," +
+                             $"\"Depth\":{tag.Depth}," +
                              $"\"PartitionKey\":\"{imageName}\"," +
                              $"\"RowKey\":\"{tagIndex}\"" +
                              $"}}";

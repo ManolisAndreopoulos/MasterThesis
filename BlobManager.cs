@@ -29,21 +29,21 @@ public class BlobManager : MonoBehaviour
     
     private string _message = string.Empty;
 
-    public async void StoreImageAfterComputerVision(string imageName)
+    public async Task StoreImageAfterComputerVision(string imageName, byte[] image)
     {
         processedAbImage.StoreOnly = false;
         _blobName = imageName;
-        _message = _blobName + " : " + await PutBlobAsync();
+        _message = _blobName + " : " + await PutBlobAsync(image);
         //UpdateMessage(!processedAbImage.StoreOnly);
     }
 
-    public async void StoreImage()
-    {
-        processedAbImage.StoreOnly = true;
-        _blobName = "AbImage" + DateTime.Now.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss") + ".png";
-        _message = _blobName + " : " + await PutBlobAsync();
-        UpdateMessage(!processedAbImage.StoreOnly);
-    }
+    //public async void StoreImage()
+    //{
+    //    processedAbImage.StoreOnly = true;
+    //    _blobName = "AbImage" + DateTime.Now.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss") + ".png";
+    //    _message = _blobName + " : " + await PutBlobAsync();
+    //    UpdateMessage(!processedAbImage.StoreOnly);
+    //}
 
     private void UpdateMessage(bool toAppend)
     {
@@ -57,15 +57,11 @@ public class BlobManager : MonoBehaviour
         }
     }
 
-    private async Task<string> PutBlobAsync()
+    private async Task<string> PutBlobAsync(byte[] image)
     {
        
         string blobUrl = $"https://{StorageAccountName}.blob.core.windows.net/{containerName}/{_blobName}";
 
-        // Transforming from Alpha8 to RGB
-        //var conversionStart = Time.time;
-        var image = processedAbImage.AnalyzedImageInBytes;
-        //var conversionDurationMessage = $"\nImage Conversion took: {Time.time - conversionStart} s\n";
 
         // Resources
         using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Put, blobUrl);

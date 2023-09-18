@@ -3,12 +3,13 @@ using UnityEngine;
 using System.Runtime.InteropServices;
 using System.Collections;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 
 #if ENABLE_WINMD_SUPPORT
 using HL2UnityPlugin;
 #endif
 
-public class ResearchModeDepthStream : MonoBehaviour, ISensorStreamProvider
+public class DepthStreamProvider : MonoBehaviour, ISensorStreamProvider
 {
 #if ENABLE_WINMD_SUPPORT
     HL2ResearchMode researchMode;
@@ -26,7 +27,34 @@ public class ResearchModeDepthStream : MonoBehaviour, ISensorStreamProvider
     
     // depth map parameter
     private ushort[] depthFrameData = null;
-    public ushort[] DepthFrameData => depthFrameData;
+    [CanBeNull] public ushort[] DepthFrameData => RotateAndFlipDepthStream(depthFrameData);
+    public int Height { get; private set; }
+    public int Width { get; private set; }
+
+    private ushort[] RotateAndFlipDepthStream(ushort[] originalStream)
+    {
+        if (originalStream == null)
+        {
+            return null;
+        }
+
+        Height = 512;
+        Width = 512;
+
+        var modifiedStream = new ushort[originalStream.Length];
+
+        for (var y = 0; y < Height; y++)
+        {
+            for (var x = 0; x < Width; x++)
+            {
+                //Rotate and flip
+                var originalIndex = y * Width + x;
+                var rotatedAndFlippedIndex = (Height - y - 1) * Width + x;
+                modifiedStream[rotatedAndFlippedIndex] = originalStream[originalIndex];
+            }
+        }
+        return modifiedStream;
+    }
 
     #region ISensorStreamProvider
 

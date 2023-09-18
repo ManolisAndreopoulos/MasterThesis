@@ -4,6 +4,8 @@ public class Tag
     public double Probability { get; private set; }
     public BoundingBox BoundingBox { get; private set; }
 
+    public int? Depth { get; set; } = null;
+
     public Tag(Name name, double probability, BoundingBox boundingBox)
     {
         Name = name;

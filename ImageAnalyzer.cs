@@ -12,7 +12,9 @@ using Object = System.Object;
 
 public class ImageAnalyzer : MonoBehaviour
 {
-    [SerializeField] private ProcessedABImage processedAbImage;
+    [SerializeField] private DepthStreamProvider DepthStreamProvider = null;
+
+    [SerializeField] private ProcessedABImage ProcessedAbImage;
     [SerializeField] private float MinimumConfidenceForObjectDetection;
 
     public TextMeshPro outputText;
@@ -64,21 +66,21 @@ public class ImageAnalyzer : MonoBehaviour
         //Iterate through the list of buzzwords
         if (_wordsIndicateGrasping.Any(word => caption.Contains(word)))
         {
-            BlobManager.StoreImageAfterComputerVision(caption);
+            BlobManager.StoreImageAfterComputerVision(caption, ProcessedAbImage.AnalyzedImageInBytes);
         }
     }
 
     private async Task<Prediction> AnalyzeWithComputerVision()
     {
-        if (processedAbImage == null)
+        if (ProcessedAbImage == null)
         {
-            var message = $"Error: Assign variable {processedAbImage.name} in Unity.";
+            var message = $"Error: Assign variable {ProcessedAbImage.name} in Unity.";
             var faultyPrediction = new Prediction() { Result = message };
 
             return faultyPrediction;
         }
         
-        var image = processedAbImage.CurrentImageInBytes;
+        var image = ProcessedAbImage.CurrentImageInBytes;
 
         var result = string.Empty;
 
@@ -117,52 +119,76 @@ public class ImageAnalyzer : MonoBehaviour
     {
         outputText.text = string.Empty;
 
-        var totalOperationStartTime = Time.time;
-        
-        var tags = await DetectWithCustomVision();
-
-        var customVisionDuration = Math.Round(Time.time - totalOperationStartTime, 2);
-        
-        if (tags == null)
+        try
         {
-            outputText.text = _errorMessage;
-            return;
-        }
 
-        if (tags.Count == 0)
+            var depthMap = DepthStreamProvider.DepthFrameData;
+            var maxDepth = depthMap?.Max() ?? 0;
+            var depthCount = depthMap?.Length ?? 0;
+
+            var totalOperationStartTime = Time.time;
+
+            var tags = await DetectWithCustomVision();
+
+            var customVisionDuration = Math.Round(Time.time - totalOperationStartTime, 2);
+
+            if (tags == null)
+            {
+                outputText.text = _errorMessage;
+                return;
+            }
+
+            if (tags.Count == 0)
+            {
+                outputText.text = "No tags were found";
+                return;
+            }
+
+            var filteredTags = TagsManager.GetTagsWithConfidenceHigherThan(MinimumConfidenceForObjectDetection, tags);
+
+            if (!filteredTags.Any())
+            {
+                outputText.text = "No tags with high confidence were found";
+                return;
+            }
+
+            var depthImage = ImageUtilities.ConvertToPNG(depthMap);
+            DepthUtilities.AugmentTagsWithDepth(filteredTags, depthMap);
+
+            var imageWithBoundingBoxes = ImageUtilities.AugmentImageWithBoundingBoxesAndDepth(filteredTags, depthMap);
+
+
+            var imageName = "Image" + DateTime.Now.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss") + ".png";
+            var bboxImageName = "BBoxImage" + imageName;
+            var depthImageName = "Depth" + imageName;
+
+            var blobStartTime = Time.time;
+            await BlobManager.StoreImageAfterComputerVision(imageName, ProcessedAbImage.AnalyzedImageInBytes); //todo: delete await after done with profiling
+            await BlobManager.StoreImageAfterComputerVision(bboxImageName, imageWithBoundingBoxes); //todo: delete await after done with profiling
+            await BlobManager.StoreImageAfterComputerVision(depthImageName, depthImage); //todo: delete await after done with profiling
+            var blobDuration = Math.Round(Time.time - blobStartTime, 2);
+
+            var tableStartTime = Time.time;
+            await TableManager.StoreTags(filteredTags, imageName); //todo: delete await after done with profiling
+            var tableDuration = Math.Round(Time.time - tableStartTime);
+
+            //Profiling
+            var totalOperationDuration = Math.Round(Time.time - totalOperationStartTime, 2);
+
+            var runtimes = new Runtimes(customVisionDuration, blobDuration, tableDuration, totalOperationDuration);
+
+            TableManager.StoreRuntimes(runtimes, imageName);
+
+            var runtimeProfilingMessage = GetRuntimeProfilingMessage(runtimes);
+
+            outputText.text += runtimeProfilingMessage;
+            outputText.text += $"Max Depth: {maxDepth}\n";
+            outputText.text += $"Depth Count: {depthCount}\n";
+        }
+        catch (Exception e)
         {
-            outputText.text = "No tags were found";
-            return;
+            outputText.text = e.Message;
         }
-
-        var filteredTags = TagsManager.GetTagsWithConfidenceHigherThan(MinimumConfidenceForObjectDetection, tags);
-
-        if (!filteredTags.Any())
-        {
-            outputText.text = "No tags with high confidence were found";
-            return;
-        }
-
-        var imageName = "Image" + DateTime.Now.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss") + ".png";
-
-        var blobStartTime = Time.time;
-        BlobManager.StoreImageAfterComputerVision(imageName);
-        var blobDuration = Math.Round(Time.time - blobStartTime, 2);
-
-        var tableStartTime = Time.time;
-        TableManager.StoreTags(filteredTags, imageName);
-        var tableDuration = Math.Round(Time.time - tableStartTime);
-
-        //Profiling
-        var totalOperationDuration = Math.Round(Time.time - totalOperationStartTime, 2);
-
-        var runtimes = new Runtimes(customVisionDuration, blobDuration, tableDuration, totalOperationDuration);
-
-        TableManager.StoreRuntimes(runtimes, imageName);
-
-        var runtimeProfilingMessage = GetRuntimeProfilingMessage(runtimes);
-
-        outputText.text += runtimeProfilingMessage;
     }
 
     private static string GetRuntimeProfilingMessage(Runtimes runtimes)
@@ -175,7 +201,7 @@ public class ImageAnalyzer : MonoBehaviour
             $"\nVision Duration: {runtimes.CustomVision}s ({customVisionDurationPercentage})\n";
         var blobStoreDurationMessage = $"Blob Duration: {runtimes.BlobStorage}s ({blobDurationPercentage})\n";
         var tableStoreDurationMessage = $"Table Duration: {runtimes.TableStorage}s ({tableDurationPercentage})\n";
-        var totalDurationMessage = $"Total Duration: {runtimes.Total}s\n";
+        var totalDurationMessage = $"Total Duration: {runtimes.Total}s\n\n";
 
         var runtimeProfilingMessage = customVisionDurationMessage + blobStoreDurationMessage +
                                       tableStoreDurationMessage + totalDurationMessage;
@@ -185,13 +211,13 @@ public class ImageAnalyzer : MonoBehaviour
     [ItemCanBeNull]
     private async Task<List<Tag>> DetectWithCustomVision()
     {
-        if (processedAbImage == null)
+        if (ProcessedAbImage == null)
         {
-            _errorMessage = $"Error: Assign variable {processedAbImage.name} in Unity.";
+            _errorMessage = $"Error: Assign variable {ProcessedAbImage.name} in Unity.";
             return null;
         }
 
-        var image = processedAbImage.CurrentImageInBytes;
+        var image = ProcessedAbImage.CurrentImageInBytes;
 
         var result = string.Empty;
 
@@ -222,7 +248,7 @@ public class ImageAnalyzer : MonoBehaviour
 
         _debugResult = result;
 
-        var predictedTags = TagsManager.GetPredictedTagsFromResult(result);
+        var predictedTags = TagsManager.GetPredictedTagsFromResult(result, DepthStreamProvider.Height, DepthStreamProvider.Width);
        
         return predictedTags;
     }

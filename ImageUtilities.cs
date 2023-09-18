@@ -1,9 +1,41 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public static class ImageUtilities
 {
+    public static Texture2D AdjustedImageTexture { get; private set; }
+
     private const float brightnessFactor = 5f;
     private const float contrastFactor = 0.95f;
+
+    private const int Height = 512;
+    private const int Width = 512;
+
+    public static byte[] ConvertToPNG(ushort[] originalStream)
+    {
+        var valuesCount = originalStream.Length;
+        var maxvalue = originalStream.Max();
+
+        var pixels = new Color[valuesCount];
+
+        for (var i = 0; i < valuesCount; i++)
+        {
+            var normalizedValue = originalStream[i] / (float) maxvalue;
+
+            pixels[i] = new Color(normalizedValue, normalizedValue, normalizedValue, 1);
+        }
+
+        var texture = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
+
+        texture.SetPixels(pixels);
+        texture.Apply();
+
+        var image = texture.EncodeToPNG();
+
+        return image;
+    }
 
     public static byte[] AdjustBrightnessContrastAndRotate(Texture2D alphaTexture)
     {
@@ -19,7 +51,7 @@ public static class ImageUtilities
             {
                 //Rotate and flip
                 var originalIndex = y * width + x;
-                var rotatedAndFlippedIndex = (height - y - 1) * width + x ;
+                var rotatedAndFlippedIndex = (height - y - 1) * width + x;
 
                 var alpha = originalPixels[originalIndex].a;
 
@@ -28,17 +60,106 @@ public static class ImageUtilities
                 var newB = (((alpha * 255 - 128) * contrastFactor + 128) * brightnessFactor) / 255;
                 var newA = 1.0f;
 
-                modifiedPixels[rotatedAndFlippedIndex] = new Color(Mathf.Clamp01(newR), Mathf.Clamp01(newG), Mathf.Clamp01(newB), newA);
+                modifiedPixels[rotatedAndFlippedIndex] =
+                    new Color(Mathf.Clamp01(newR), Mathf.Clamp01(newG), Mathf.Clamp01(newB), newA);
             }
         }
 
-        var rgbaTexture = new Texture2D(alphaTexture.width, alphaTexture.height, TextureFormat.RGBA32, false);
+        AdjustedImageTexture = new Texture2D(alphaTexture.width, alphaTexture.height, TextureFormat.RGBA32, false);
 
-        rgbaTexture.SetPixels(modifiedPixels);
-        rgbaTexture.Apply();
+        AdjustedImageTexture.SetPixels(modifiedPixels);
+        AdjustedImageTexture.Apply();
 
-        var image = rgbaTexture.EncodeToPNG();
+        var image = AdjustedImageTexture.EncodeToPNG();
 
         return image;
+    }
+
+    public static byte[] AugmentImageWithBoundingBoxesAndDepth(List<Tag> tags, ushort[] depthMap)
+    {
+        var originalPixels = AdjustedImageTexture.GetPixels();
+        var augmentedPixels = originalPixels;
+        var boundaryThicknessInPixels = 2;
+
+        var height = AdjustedImageTexture.height;
+        var width = AdjustedImageTexture.width;
+
+
+        foreach (var tag in tags)
+        {
+            // boundaries
+            var left = tag.BoundingBox.Left;
+            var right = tag.BoundingBox.Right;
+            var top = tag.BoundingBox.Top;
+            var bottom = tag.BoundingBox.Bottom;
+
+            // left boundary
+            for (var x = Math.Max(0, left - (boundaryThicknessInPixels - 1)); x <= Math.Min(width, left + (boundaryThicknessInPixels - 1)); x++)
+            {
+                for (var y = top; y <= bottom; y++)
+                {
+
+                    var index = (height - y) * width + x;
+                    augmentedPixels[index] = new Color(1, 0, 0, 1);
+                }
+            }
+
+            // right boundary
+            for (var x = Math.Max(0, right - (boundaryThicknessInPixels - 1)); x <= Math.Min(width, right + (boundaryThicknessInPixels - 1)); x++)
+            {
+                for (var y = top; y <= bottom; y++)
+                {
+
+                    var index = (height - y) * width + x;
+                    augmentedPixels[index] = new Color(1, 0, 0, 1);
+                }
+            }
+
+            // top boundary
+            for (var x = left; x <= right; x++)
+            {
+                for (var y = Math.Max(0, top - (boundaryThicknessInPixels - 1)); y <= Math.Min(height, top + (boundaryThicknessInPixels - 1)); y++)
+                {
+
+                    var index = (height - y) * width + x;
+                    augmentedPixels[index] = new Color(1, 0, 0, 1);
+                }
+            }
+
+            // bottom boundary
+            for (var x = left; x <= right; x++)
+            {
+                for (var y = Math.Max(0, bottom - (boundaryThicknessInPixels - 1)); y <= Math.Min(height, bottom + (boundaryThicknessInPixels - 1)); y++)
+                {
+
+                    var index = (height - y) * width + x;
+                    augmentedPixels[index] = new Color(1, 0, 0, 1);
+                }
+            }
+
+            // median depth points
+            for (var x = Math.Max(0, left); x <= Math.Min(Width, right); x++)
+            {
+                for (var y = Math.Max(0, top); y <= Math.Min(Height, bottom); y++)
+                {
+                    var index = (Height - y) * Width + x;
+                    var depth = depthMap[index];
+
+                    if (depth == tag.Depth)
+                    {
+                        augmentedPixels[index] = new Color(1, 0, 0, 1);
+                    }
+                }
+            }
+        }
+
+        var rgbaTexture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+        rgbaTexture.SetPixels(augmentedPixels);
+        rgbaTexture.Apply();
+
+        var augmentedImage = rgbaTexture.EncodeToPNG();
+
+        return augmentedImage;
     }
 }

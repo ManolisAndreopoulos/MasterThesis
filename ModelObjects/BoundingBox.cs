@@ -1,15 +1,15 @@
 public class BoundingBox
 {
-    public double Left { get; }
-    public double Top { get; }
-    public double Width { get; }
-    public double Height { get; }
+    public int Left { get; }
+    public int Right { get; }
+    public int Top { get; }
+    public int Bottom { get; }
 
-    public BoundingBox(double left, double top, double width, double height)
+    public BoundingBox(int left, int right, int top, int bottom)
     {
         Left = left;
+        Right = right;
         Top = top;
-        Width = width;
-        Height = height;
+        Bottom = bottom;
     }
 }

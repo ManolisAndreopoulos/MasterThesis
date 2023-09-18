@@ -10,7 +10,7 @@ using UnityEngine.UI;
 using HL2UnityPlugin;
 #endif
 
-public class ResearchModeActiveBrightnessStream : MonoBehaviour, ISensorStreamProvider
+public class ActiveBrightnessStreamProvider : MonoBehaviour, ISensorStreamProvider
 {
 #if ENABLE_WINMD_SUPPORT
     HL2ResearchMode researchMode;
