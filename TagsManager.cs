@@ -1,8 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
+using UnityEngine;
 
 public static class TagsManager
 {
@@ -27,6 +30,56 @@ public static class TagsManager
 
     // Culture Info for Floating Point
     private static CultureInfo ci = (CultureInfo)CultureInfo.CurrentCulture.Clone();
+
+    public static void AugmentTagsWithForegroundIndices(List<Tag> tags, Texture2D abImageTexture)
+    {
+        var greyscalePixels = abImageTexture.GetPixels();
+
+        const int height = 512;
+        const int width = 512;
+
+        foreach (var tag in tags)
+        {
+            // boundaries
+            var left = tag.BoundingBox.Left;
+            var right = tag.BoundingBox.Right;
+            var top = tag.BoundingBox.Top;
+            var bottom = tag.BoundingBox.Bottom;
+
+            var boundingBoxPixels = new List<int>(); //values 0 to 255
+            for (var x = Math.Max(0, left); x <= Math.Min(width, right); x++)
+            {
+                for (var y = Math.Max(0, top); y <= Math.Min(height, bottom); y++)
+                {
+                    var index = (height - y) * width + x;
+                    boundingBoxPixels.Add( (int) (greyscalePixels[index].r * 255));
+                }
+            }
+
+            var threshold = OtsuThresholding.GetOtsuThreshold(boundingBoxPixels.ToArray());
+
+            // Find the indices of the foreground pixels in the original image
+            var foregroundIndices = new List<int>();
+            for (var x = Math.Max(0, left); x <= Math.Min(width, right); x++)
+            {
+                for (var y = Math.Max(0, top); y <= Math.Min(height, bottom); y++)
+                {
+                    var index = (height - y) * width + x;
+                    if ((int) (greyscalePixels[index].r * 255) > threshold)
+                    {
+                        foregroundIndices.Add(index);
+                    }
+                }
+            }
+
+            tag.ForegroundIndices = foregroundIndices;
+
+            //todo: for debugging
+            tag.OtsuThreshold = threshold;
+            tag.HistogramMaxByte = OtsuThresholding.GetMostFrequentDepthInBBox();
+            tag.HistogramMaxCount = OtsuThresholding.GetCountOfMostFrequentDepthInBBox();
+        }
+    }
 
     public static List<Tag> GetTagsWithConfidenceHigherThan(float minimumConfidence, List<Tag> tagsToFilter)
     {

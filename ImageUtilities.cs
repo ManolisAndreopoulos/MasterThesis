@@ -138,18 +138,24 @@ public static class ImageUtilities
             }
 
             // median depth points
-            for (var x = Math.Max(0, left); x <= Math.Min(Width, right); x++)
-            {
-                for (var y = Math.Max(0, top); y <= Math.Min(Height, bottom); y++)
-                {
-                    var index = (Height - y) * Width + x;
-                    var depth = depthMap[index];
+            //for (var x = Math.Max(0, left); x <= Math.Min(Width, right); x++)
+            //{
+            //    for (var y = Math.Max(0, top); y <= Math.Min(Height, bottom); y++)
+            //    {
+            //        var index = (Height - y) * Width + x;
+            //        var depth = depthMap[index];
 
-                    if (depth == tag.Depth)
-                    {
-                        augmentedPixels[index] = new Color(1, 0, 0, 1);
-                    }
-                }
+            //        if (depth == tag.Depth)
+            //        {
+            //            augmentedPixels[index] = new Color(1, 0, 0, 1);
+            //        }
+            //    }
+            //}
+            if (tag.ForegroundIndices == null) continue;
+            
+            foreach (var index in tag.ForegroundIndices)
+            {
+                augmentedPixels[index] = new Color(1, 0, 0, 1);
             }
         }
 

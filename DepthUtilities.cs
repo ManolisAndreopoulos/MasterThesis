@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.MixedReality.Toolkit;
 using UnityEngine;
 
 public static class DepthUtilities
@@ -18,12 +19,35 @@ public static class DepthUtilities
             var top = tag.BoundingBox.Top;
             var bottom = tag.BoundingBox.Bottom;
 
-            var enclosedDepths = FindBBoxEnclosedDepths(depthMap, left, right, top, bottom);
+            var estimatedDepth = EstimateObjectDepth(tag, depthMap);
 
-            var estimatedDepth = EstimateObjectDepth(enclosedDepths.ToList());
+            if (estimatedDepth == null)
+            {
+                //var enclosedDepths = FindBBoxEnclosedDepths(depthMap, left, right, top, bottom);
+                //estimatedDepth = CalculateMedian(enclosedDepths.ToList());
+                tag.Depth = 0;
+                return;
+            }
 
             tag.Depth = estimatedDepth;
         }
+    }
+
+    private static int? EstimateObjectDepth(Tag tag, ushort[] depthMap)
+    {
+        if (tag.ForegroundIndices == null)
+        {
+            return null;
+        }
+
+        var filteredDepths = new List<ushort>();
+
+        foreach (var index in tag.ForegroundIndices)
+        {
+            filteredDepths.Add(depthMap[index]);
+        }
+
+        return CalculateMedian(filteredDepths);
     }
 
     private static ushort[] FindBBoxEnclosedDepths(ushort[] depthMap, int left, int right, int top, int bottom)

@@ -124,6 +124,9 @@ public class TableManager : MonoBehaviour
                              $"\"Top\":{tag.BoundingBox.Top}," +
                              $"\"Bottom\":{tag.BoundingBox.Bottom}," +
                              $"\"Depth\":{tag.Depth}," +
+                             $"\"OtsuThreshold\":{tag.OtsuThreshold}," + //todo: for debugging
+                             $"\"HistogramMaxByte\":{tag.HistogramMaxByte}," + //todo: for debugging
+                             $"\"HistogramMaxCount\":{tag.HistogramMaxCount}," + //todo: for debugging
                              $"\"PartitionKey\":\"{imageName}\"," +
                              $"\"RowKey\":\"{tagIndex}\"" +
                              $"}}";

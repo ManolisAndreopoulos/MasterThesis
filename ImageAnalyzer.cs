@@ -128,7 +128,8 @@ public class ImageAnalyzer : MonoBehaviour
 
             var totalOperationStartTime = Time.time;
 
-            var tags = await DetectWithCustomVision();
+            var imagePNG = ProcessedAbImage.CurrentImageInBytes;
+            var tags = await DetectWithCustomVision(imagePNG);
 
             var customVisionDuration = Math.Round(Time.time - totalOperationStartTime, 2);
 
@@ -152,7 +153,10 @@ public class ImageAnalyzer : MonoBehaviour
                 return;
             }
 
-            var depthImage = ImageUtilities.ConvertToPNG(depthMap);
+            var depthImagePNG = ImageUtilities.ConvertToPNG(depthMap);
+
+            //TagsManager.AugmentTagsWithForegroundIndices(filteredTags, image);
+            TagsManager.AugmentTagsWithForegroundIndices(filteredTags, ProcessedAbImage.AnalyzedImageTexture);
             DepthUtilities.AugmentTagsWithDepth(filteredTags, depthMap);
 
             var imageWithBoundingBoxes = ImageUtilities.AugmentImageWithBoundingBoxesAndDepth(filteredTags, depthMap);
@@ -165,7 +169,7 @@ public class ImageAnalyzer : MonoBehaviour
             var blobStartTime = Time.time;
             await BlobManager.StoreImageAfterComputerVision(imageName, ProcessedAbImage.AnalyzedImageInBytes); //todo: delete await after done with profiling
             await BlobManager.StoreImageAfterComputerVision(bboxImageName, imageWithBoundingBoxes); //todo: delete await after done with profiling
-            await BlobManager.StoreImageAfterComputerVision(depthImageName, depthImage); //todo: delete await after done with profiling
+            await BlobManager.StoreImageAfterComputerVision(depthImageName, depthImagePNG); //todo: delete await after done with profiling
             var blobDuration = Math.Round(Time.time - blobStartTime, 2);
 
             var tableStartTime = Time.time;
@@ -209,15 +213,13 @@ public class ImageAnalyzer : MonoBehaviour
     }
 
     [ItemCanBeNull]
-    private async Task<List<Tag>> DetectWithCustomVision()
+    private async Task<List<Tag>> DetectWithCustomVision(byte[] image)
     {
         if (ProcessedAbImage == null)
         {
             _errorMessage = $"Error: Assign variable {ProcessedAbImage.name} in Unity.";
             return null;
         }
-
-        var image = ProcessedAbImage.CurrentImageInBytes;
 
         var result = string.Empty;
 
