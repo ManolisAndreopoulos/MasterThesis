@@ -9,22 +9,20 @@ public static class DepthUtilities
     private const int Height = 512;
     private const int Width = 512;
 
-    public static void AugmentTagsWithDepth(List<Tag> tags, ushort[] depthMap)
+    public static void AugmentTagsWithFilteredDepth(List<Tag> tags)
     {
         foreach (var tag in tags)
         {
-            // boundaries
-            var left = tag.BoundingBox.Left;
-            var right = tag.BoundingBox.Right;
-            var top = tag.BoundingBox.Top;
-            var bottom = tag.BoundingBox.Bottom;
+            //todo: change and populate first the HeuristicFilteredPixels parameter of the tag before estimating the depth from there
 
-            var estimatedDepth = EstimateObjectDepth(tag, depthMap);
+            var medianDepth = CalculateMedianDepth(tag.OtsuForegroundPixels);
+
+            tag.HeuristicFilteredPixels = ApplyHeuristicFilteringTo(tag.OtsuForegroundPixels, medianDepth);
+
+            var estimatedDepth = EstimateObjectDepth(tag.HeuristicFilteredPixels); 
 
             if (estimatedDepth == null)
             {
-                //var enclosedDepths = FindBBoxEnclosedDepths(depthMap, left, right, top, bottom);
-                //estimatedDepth = CalculateMedian(enclosedDepths.ToList());
                 tag.Depth = 0;
                 return;
             }
@@ -33,22 +31,46 @@ public static class DepthUtilities
         }
     }
 
-    private static int? EstimateObjectDepth(Tag tag, ushort[] depthMap)
+    private static int? EstimateObjectDepth(List<PixelDepth> tagHeuristicFilteredPixels)
     {
-        if (tag.ForegroundIndices == null)
-        {
-            return null;
-        }
-
-        var filteredDepths = new List<ushort>();
-
-        foreach (var index in tag.ForegroundIndices)
-        {
-            filteredDepths.Add(depthMap[index]);
-        }
-
-        return CalculateMedian(filteredDepths);
+        return CalculateMedianDepth(tagHeuristicFilteredPixels);
     }
+
+    private static List<PixelDepth> ApplyHeuristicFilteringTo(List<PixelDepth> tagOtsuForegroundPixels, int medianDepth)
+    {
+        var filteredPixelDepths = new List<PixelDepth>();
+        var depthOffsetFromMedianInMillimeters = 100;
+
+        var maxDepth = medianDepth + depthOffsetFromMedianInMillimeters;
+        var minDepth = medianDepth - depthOffsetFromMedianInMillimeters;
+
+        foreach (var pixel in tagOtsuForegroundPixels)
+        {
+            if (pixel.Depth < maxDepth && pixel.Depth > minDepth)
+            {
+                filteredPixelDepths.Add(pixel);
+            }
+        }
+
+        return filteredPixelDepths;
+    }
+
+    //private static int? EstimateObjectDepth(Tag tag)
+    //{
+    //    if (tag.OtsuForegroundPixels == null)
+    //    {
+    //        return null;
+    //    }
+
+    //    var filteredDepths = new List<ushort>();
+
+    //    foreach (var pixel in tag.OtsuForegroundPixels)
+    //    {
+    //        filteredDepths.Add(pixel.Depth);
+    //    }
+
+    //    return CalculateMedianDepth(filteredDepths);
+    //}
 
     private static ushort[] FindBBoxEnclosedDepths(ushort[] depthMap, int left, int right, int top, int bottom)
     {
@@ -68,32 +90,30 @@ public static class DepthUtilities
         return enclosedDepths.ToArray();
     }
 
-    private static int EstimateObjectDepth(List<ushort> enclosedDepths)
+    private static int CalculateMedianDepth(List<PixelDepth> pixelDepths)
     {
-        //var mean = enclosedDepths.Average();
-        var median = CalculateMedian(enclosedDepths);
-
-        return median;
-    }
-
-    private static int CalculateMedian(List<ushort> values)
-    {
-        if (values.Count == 0)
+        if (pixelDepths.Count == 0)
         {
             throw new InvalidOperationException("The list is empty. Cannot calculate the median.");
         }
 
-        // Sort the list in ascending order
-        values.Sort();
+        var depths = new List<int>();
+        foreach (var pixel in pixelDepths)
+        {
+            depths.Add(pixel.Depth);
+        }
 
-        var middle = values.Count / 2;
+        // Sort the list in ascending order
+        depths.Sort();
+
+        var middle = depths.Count / 2;
 
         // If there are an odd number of elements, return the middle value
-        if (values.Count % 2 != 0) return values[middle];
+        if (depths.Count % 2 != 0) return depths[middle];
 
         // If there are an even number of elements, average the two middle values
-        var leftMiddleValue = values[middle - 1];
-        var rightMiddleValue = values[middle];
+        var leftMiddleValue = depths[middle - 1];
+        var rightMiddleValue = depths[middle];
         return (leftMiddleValue + rightMiddleValue) / 2;
     }
 }

@@ -156,8 +156,8 @@ public class ImageAnalyzer : MonoBehaviour
             var depthImagePNG = ImageUtilities.ConvertToPNG(depthMap);
 
             //TagsManager.AugmentTagsWithForegroundIndices(filteredTags, image);
-            TagsManager.AugmentTagsWithForegroundIndices(filteredTags, ProcessedAbImage.AnalyzedImageTexture);
-            DepthUtilities.AugmentTagsWithDepth(filteredTags, depthMap);
+            TagsManager.AugmentTagsWithForegroundIndices(filteredTags, ProcessedAbImage.AnalyzedImageTexture, depthMap);
+            DepthUtilities.AugmentTagsWithFilteredDepth(filteredTags);
 
             var imageWithBoundingBoxes = ImageUtilities.AugmentImageWithBoundingBoxesAndDepth(filteredTags, depthMap);
 

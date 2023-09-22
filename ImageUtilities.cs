@@ -137,25 +137,20 @@ public static class ImageUtilities
                 }
             }
 
-            // median depth points
-            //for (var x = Math.Max(0, left); x <= Math.Min(Width, right); x++)
-            //{
-            //    for (var y = Math.Max(0, top); y <= Math.Min(Height, bottom); y++)
-            //    {
-            //        var index = (Height - y) * Width + x;
-            //        var depth = depthMap[index];
-
-            //        if (depth == tag.Depth)
-            //        {
-            //            augmentedPixels[index] = new Color(1, 0, 0, 1);
-            //        }
-            //    }
-            //}
-            if (tag.ForegroundIndices == null) continue;
+            // Otsu Foreground points in red
+            if (tag.OtsuForegroundPixels == null) continue;
             
-            foreach (var index in tag.ForegroundIndices)
+            foreach (var pixel in tag.OtsuForegroundPixels)
             {
-                augmentedPixels[index] = new Color(1, 0, 0, 1);
+                augmentedPixels[pixel.Index] = new Color(1, 0, 0, 1);
+            }
+            
+            // Heuristic filtering points in blue
+            if (tag.HeuristicFilteredPixels == null) continue;
+            
+            foreach (var pixel in tag.HeuristicFilteredPixels)
+            {
+                augmentedPixels[pixel.Index] = new Color(0, 0, 1, 1);
             }
         }
 

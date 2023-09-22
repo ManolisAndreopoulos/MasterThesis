@@ -12,7 +12,9 @@ public class Tag
     public int? HistogramMaxByte { get; set; } = null; // todo: for debugging
     public int? HistogramMaxCount { get; set; } = null; // todo: for debugging
 
-    public List<int>? ForegroundIndices { get; set; } = null;
+    // Non-database parameters
+    public List<PixelDepth>? OtsuForegroundPixels { get; set; } = null;
+    public List<PixelDepth>? HeuristicFilteredPixels { get; set; } = null;
 
     public Tag(Name name, double probability, BoundingBox boundingBox)
     {

@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public static class TagsManager
 {
@@ -31,9 +32,9 @@ public static class TagsManager
     // Culture Info for Floating Point
     private static CultureInfo ci = (CultureInfo)CultureInfo.CurrentCulture.Clone();
 
-    public static void AugmentTagsWithForegroundIndices(List<Tag> tags, Texture2D abImageTexture)
+    public static void AugmentTagsWithForegroundIndices(List<Tag> tags, Texture2D abImageTexture, ushort[] depthMap)
     {
-        var greyscalePixels = abImageTexture.GetPixels();
+        var abImagePixels = abImageTexture.GetPixels();
 
         const int height = 512;
         const int width = 512;
@@ -52,29 +53,33 @@ public static class TagsManager
                 for (var y = Math.Max(0, top); y <= Math.Min(height, bottom); y++)
                 {
                     var index = (height - y) * width + x;
-                    boundingBoxPixels.Add( (int) (greyscalePixels[index].r * 255));
+                    boundingBoxPixels.Add( (int) (abImagePixels[index].r * 255));
                 }
             }
 
             var threshold = OtsuThresholding.GetOtsuThreshold(boundingBoxPixels.ToArray());
 
             // Find the indices of the foreground pixels in the original image
-            var foregroundIndices = new List<int>();
+            var foregroundPixels = new List<PixelDepth>();
             for (var x = Math.Max(0, left); x <= Math.Min(width, right); x++)
             {
                 for (var y = Math.Max(0, top); y <= Math.Min(height, bottom); y++)
                 {
                     var index = (height - y) * width + x;
-                    if ((int) (greyscalePixels[index].r * 255) > threshold)
+                    var abIntensity = (int) (abImagePixels[index].r * 255);
+
+                    if (abIntensity > threshold)
                     {
-                        foregroundIndices.Add(index);
+                        var depth = depthMap[index];
+                        var pixelDepth = new PixelDepth(index, depth);
+                        foregroundPixels.Add(pixelDepth);
                     }
                 }
             }
 
-            tag.ForegroundIndices = foregroundIndices;
+            tag.OtsuForegroundPixels = foregroundPixels;
 
-            //todo: for debugging
+            //todo: for debugging, delete after
             tag.OtsuThreshold = threshold;
             tag.HistogramMaxByte = OtsuThresholding.GetMostFrequentDepthInBBox();
             tag.HistogramMaxCount = OtsuThresholding.GetCountOfMostFrequentDepthInBBox();
