@@ -1,11 +1,11 @@
-public class Runtimes
+public class RuntimeContainer
 {
     public double CustomVision { get; }
     public double BlobStorage { get; }
     public double TableStorage { get; }
     public double Total { get; }
 
-    public Runtimes(double customVision, double blobStorage, double tableStorage, double total)
+    public RuntimeContainer(double customVision, double blobStorage, double tableStorage, double total)
     {
         CustomVision = customVision;
         BlobStorage = blobStorage;

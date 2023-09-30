@@ -4,17 +4,15 @@ using System.Linq;
 using Microsoft.MixedReality.Toolkit;
 using UnityEngine;
 
-public static class DepthUtilities
+public class DepthUtilities
 {
     private const int Height = 512;
     private const int Width = 512;
 
-    public static void AugmentTagsWithFilteredDepth(List<Tag> tags)
+    public void AugmentTagsWithFilteredDepth(List<Tag> tags)
     {
         foreach (var tag in tags)
         {
-            //todo: change and populate first the HeuristicFilteredPixels parameter of the tag before estimating the depth from there
-
             var medianDepth = CalculateMedianDepth(tag.OtsuForegroundPixels);
 
             tag.HeuristicFilteredPixels = ApplyHeuristicFilteringTo(tag.OtsuForegroundPixels, medianDepth);
@@ -31,12 +29,12 @@ public static class DepthUtilities
         }
     }
 
-    private static int? EstimateObjectDepth(List<PixelDepth> tagHeuristicFilteredPixels)
+    private int? EstimateObjectDepth(List<PixelDepth> tagHeuristicFilteredPixels)
     {
         return CalculateMedianDepth(tagHeuristicFilteredPixels);
     }
 
-    private static List<PixelDepth> ApplyHeuristicFilteringTo(List<PixelDepth> tagOtsuForegroundPixels, int medianDepth)
+    private List<PixelDepth> ApplyHeuristicFilteringTo(List<PixelDepth> tagOtsuForegroundPixels, int medianDepth)
     {
         var filteredPixelDepths = new List<PixelDepth>();
         var depthOffsetFromMedianInMillimeters = 100;
@@ -55,24 +53,7 @@ public static class DepthUtilities
         return filteredPixelDepths;
     }
 
-    //private static int? EstimateObjectDepth(Tag tag)
-    //{
-    //    if (tag.OtsuForegroundPixels == null)
-    //    {
-    //        return null;
-    //    }
-
-    //    var filteredDepths = new List<ushort>();
-
-    //    foreach (var pixel in tag.OtsuForegroundPixels)
-    //    {
-    //        filteredDepths.Add(pixel.Depth);
-    //    }
-
-    //    return CalculateMedianDepth(filteredDepths);
-    //}
-
-    private static ushort[] FindBBoxEnclosedDepths(ushort[] depthMap, int left, int right, int top, int bottom)
+    private ushort[] FindBBoxEnclosedDepths(ushort[] depthMap, int left, int right, int top, int bottom)
     {
         var enclosedDepths = new List<ushort>();
         for (var x = Math.Max(0, left); x <= Math.Min(Width, right); x++)
@@ -90,7 +71,7 @@ public static class DepthUtilities
         return enclosedDepths.ToArray();
     }
 
-    private static int CalculateMedianDepth(List<PixelDepth> pixelDepths)
+    private int CalculateMedianDepth(List<PixelDepth> pixelDepths)
     {
         if (pixelDepths.Count == 0)
         {

@@ -19,19 +19,19 @@ public class TableManager : MonoBehaviour
 
     private string storageAccountName = "msstorageresource";
     private string tableTagsName = "PredictedTags";
-    private string tableRuntimesName = "Runtimes";
+    private string tableRuntimesName = "OperationRuntimes";
 
     private string storageAccountKey =
         "IQQpV3U2AY6VJ21FhmkGAaGKyCQeuNN1sldwKAcwYGFbly+zbfgF3OMsBDg5RVKjnmYQoTtKvebe+AStAjdpfg==";
 
     private string _message = string.Empty;
 
-    public async void StoreRuntimes(Runtimes runtimes, string imageName)
+    public async void StoreRuntimes(WorkflowResultContainer workflowResultContainer, string imageName)
     {
-        await InsertRuntimesAsync(runtimes, imageName);
+        await InsertRuntimesAsync(workflowResultContainer, imageName);
 }
 
-    private async Task InsertRuntimesAsync(Runtimes runtimes, string imageName)
+    private async Task InsertRuntimesAsync(WorkflowResultContainer workflowResultContainer, string imageName)
     {
         string tableUrl = $"https://{storageAccountName}.table.core.windows.net/{tableRuntimesName}";
 
@@ -50,10 +50,10 @@ public class TableManager : MonoBehaviour
         // Content
 
         string jsonContent = $"{{" +
-                             $"\"CustomVision\":\"{runtimes.CustomVision}\"," +
-                             $"\"BlobStorage\":{runtimes.BlobStorage}," +
-                             $"\"TableStorage\":{runtimes.TableStorage}," +
-                             $"\"Total\":{runtimes.Total}," +
+                             $"\"CustomVision\":\"{workflowResultContainer.RuntimeContainer.CustomVision}\"," +
+                             $"\"BlobStorage\":{workflowResultContainer.RuntimeContainer.BlobStorage}," +
+                             $"\"TableStorage\":{workflowResultContainer.RuntimeContainer.TableStorage}," +
+                             $"\"Total\":{workflowResultContainer.RuntimeContainer.Total}," +
                              $"\"PartitionKey\":\"Detection\"," +
                              $"\"RowKey\":\"{imageName}\"" +
                              $"}}";
@@ -82,7 +82,7 @@ public class TableManager : MonoBehaviour
         }
     }
 
-    public async Task StoreTags(List<Tag> tags, string imageName)
+    public async void StoreTags(List<Tag> tags, string imageName)
     {
         //_message = string.Empty;
         //for (var i = 0; i < tags.Count; i++)
@@ -124,9 +124,6 @@ public class TableManager : MonoBehaviour
                              $"\"Top\":{tag.BoundingBox.Top}," +
                              $"\"Bottom\":{tag.BoundingBox.Bottom}," +
                              $"\"Depth\":{tag.Depth}," +
-                             $"\"OtsuThreshold\":{tag.OtsuThreshold}," + //todo: for debugging
-                             $"\"HistogramMaxByte\":{tag.HistogramMaxByte}," + //todo: for debugging
-                             $"\"HistogramMaxCount\":{tag.HistogramMaxCount}," + //todo: for debugging
                              $"\"PartitionKey\":\"{imageName}\"," +
                              $"\"RowKey\":\"{tagIndex}\"" +
                              $"}}";

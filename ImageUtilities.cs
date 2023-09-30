@@ -3,17 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public static class ImageUtilities
+public class ImageUtilities
 {
-    public static Texture2D AdjustedImageTexture { get; private set; }
-
     private const float brightnessFactor = 5f;
     private const float contrastFactor = 0.95f;
 
     private const int Height = 512;
     private const int Width = 512;
 
-    public static byte[] ConvertToPNG(ushort[] originalStream)
+    public byte[] ConvertToPNG(ushort[] originalStream)
     {
         var valuesCount = originalStream.Length;
         var maxvalue = originalStream.Max();
@@ -37,7 +35,7 @@ public static class ImageUtilities
         return image;
     }
 
-    public static byte[] AdjustBrightnessContrastAndRotate(Texture2D alphaTexture)
+    public AdjustedImage AdjustBrightnessContrastAndRotate(Texture2D alphaTexture, ushort[] depthFrameData)
     {
         var originalPixels = alphaTexture.GetPixels();
         var modifiedPixels = new Color[originalPixels.Length];
@@ -65,24 +63,24 @@ public static class ImageUtilities
             }
         }
 
-        AdjustedImageTexture = new Texture2D(alphaTexture.width, alphaTexture.height, TextureFormat.RGBA32, false);
+        var adjustedImageTexture = new Texture2D(alphaTexture.width, alphaTexture.height, TextureFormat.RGBA32, false);
 
-        AdjustedImageTexture.SetPixels(modifiedPixels);
-        AdjustedImageTexture.Apply();
+        adjustedImageTexture.SetPixels(modifiedPixels);
+        adjustedImageTexture.Apply();
 
-        var image = AdjustedImageTexture.EncodeToPNG();
+        var image = adjustedImageTexture.EncodeToPNG();
 
-        return image;
+        return new AdjustedImage(image, adjustedImageTexture, depthFrameData);
     }
 
-    public static byte[] AugmentImageWithBoundingBoxesAndDepth(List<Tag> tags, ushort[] depthMap)
+    public byte[] AugmentImageWithBoundingBoxesAndDepth(List<Tag> tags, Texture2D adjustedImageTexture)
     {
-        var originalPixels = AdjustedImageTexture.GetPixels();
+        var originalPixels = adjustedImageTexture.GetPixels();
         var augmentedPixels = originalPixels;
         var boundaryThicknessInPixels = 2;
 
-        var height = AdjustedImageTexture.height;
-        var width = AdjustedImageTexture.width;
+        var height = adjustedImageTexture.height;
+        var width = adjustedImageTexture.width;
 
 
         foreach (var tag in tags)

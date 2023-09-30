@@ -16,7 +16,7 @@ public class BlobManager : MonoBehaviour
     
     [Header("Image Resource")]
     [SerializeField]
-    private ProcessedABImage processedAbImage = null;
+    private AdjustedImageProvider _adjustedImageProvider = null;
 
     [Header("Response")] 
     [SerializeField] 
@@ -29,37 +29,23 @@ public class BlobManager : MonoBehaviour
     
     private string _message = string.Empty;
 
-    public async Task StoreImageAfterComputerVision(string imageName, byte[] image)
-    {
-        processedAbImage.StoreOnly = false;
-        _blobName = imageName;
-        _message = _blobName + " : " + await PutBlobAsync(image);
-        //UpdateMessage(!processedAbImage.StoreOnly);
-    }
-
-    //public async void StoreImage()
+    //public async Task StoreImageAfterComputerVision(string imageName, byte[] pngImage)
     //{
-    //    processedAbImage.StoreOnly = true;
-    //    _blobName = "AbImage" + DateTime.Now.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss") + ".png";
-    //    _message = _blobName + " : " + await PutBlobAsync();
-    //    UpdateMessage(!processedAbImage.StoreOnly);
+    //    _blobName = imageName;
+    //    _message = _blobName + " : " + await PutBlobAsync(adjustedImage);
     //}
 
-    private void UpdateMessage(bool toAppend)
+    public async void StoreImageAfterComputerVision(AdjustedImage adjustedImage)
     {
-        if (toAppend)
-        {
-            response.text += _message;
-        }
-        else
-        {
-            response.text = _message;
-        }
+        _blobName = adjustedImage.ImageTitle;
+        _message = _blobName + " : " + await PutBlobAsync(adjustedImage);
     }
 
-    private async Task<string> PutBlobAsync(byte[] image)
+
+    private async Task<string> PutBlobAsync(AdjustedImage adjustedImage)
     {
-       
+        var imageInBytes = adjustedImage.InBytes;
+
         string blobUrl = $"https://{StorageAccountName}.blob.core.windows.net/{containerName}/{_blobName}";
 
 
@@ -67,13 +53,13 @@ public class BlobManager : MonoBehaviour
         using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Put, blobUrl);
 
         // Request headers
-        httpRequestMessage.Headers.Add("x-ms-date", DateTime.UtcNow.ToString("R", CultureInfo.InvariantCulture));
+        httpRequestMessage.Headers.Add("x-ms-date", adjustedImage.TimeImageWasCaptured.ToString("R", CultureInfo.InvariantCulture));
         httpRequestMessage.Headers.Add("x-ms-version", "2017-04-17");
         httpRequestMessage.Headers.Add("x-ms-blob-type", "BlockBlob");
 
         // Content
-        httpRequestMessage.Content = new ByteArrayContent(image);
-        httpRequestMessage.Content.Headers.ContentLength = image.Length;
+        httpRequestMessage.Content = new ByteArrayContent(imageInBytes);
+        httpRequestMessage.Content.Headers.ContentLength = imageInBytes.Length;
         httpRequestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("image/png"); // Set Content-Type header (optional, but recommended)
 
         // If you need any additional headers, add them here before creating

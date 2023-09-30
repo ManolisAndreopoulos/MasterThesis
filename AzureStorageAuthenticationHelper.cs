@@ -155,35 +155,4 @@ public static class AzureStorageAuthenticationHelper
 
         return canonicalizedHeaders;
     }
-
-    /*
-    /// <summary>
-    /// This part of the signature string represents the storage account 
-    ///   targeted by the request. Will also include any additional query parameters/values.
-    /// For ListContainers, this will return something like this:
-    ///   /storageaccountname/\ncomp:list
-    /// </summary>
-    /// <param name="address">The URI of the storage service.</param>
-    /// <param name="accountName">The storage account name.</param>
-    /// <returns>String representing the canonicalized resource.</returns>
-    private static string GetCanonicalizedResource(Uri address, string storageAccountName)
-    {
-        // The absolute path is "/" because for we're getting a list of containers.
-        StringBuilder sb = new StringBuilder("/").Append(storageAccountName).Append(address.AbsolutePath);
-
-        // Address.Query is the resource, such as "?comp=list".
-        // This ends up with a NameValueCollection with 1 entry having key=comp, value=list.
-        // It will have more entries if you have more query parameters.
-        NameValueCollection values = HttpUtility.ParseQueryString(address.Query);
-
-        foreach (var item in values.AllKeys.OrderBy(k => k))
-        {
-            sb.Append('\n').Append(item).Append(':').Append(values[item]);
-        }
-
-        //return sb.ToString().ToLower();
-        return sb.ToString();
-
-    }
-    */
 }

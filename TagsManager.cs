@@ -8,8 +8,12 @@ using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public static class TagsManager
+public class TagsManager
 {
+    // Global Image Parameters
+    private const int Height = 512;
+    private const int Width = 512;
+
     // Regex Patterns
     private static string floatPattern = @"(\d*\.\d+|\d+\.?\d*)";
     private static string anyCharacterApartFromCommaPattern = $"[^,]+";
@@ -32,12 +36,9 @@ public static class TagsManager
     // Culture Info for Floating Point
     private static CultureInfo ci = (CultureInfo)CultureInfo.CurrentCulture.Clone();
 
-    public static void AugmentTagsWithForegroundIndices(List<Tag> tags, Texture2D abImageTexture, ushort[] depthMap)
+    public void AugmentTagsWithForegroundIndices(List<Tag> tags, Texture2D abImageTexture, ushort[] depthMap)
     {
         var abImagePixels = abImageTexture.GetPixels();
-
-        const int height = 512;
-        const int width = 512;
 
         foreach (var tag in tags)
         {
@@ -48,11 +49,11 @@ public static class TagsManager
             var bottom = tag.BoundingBox.Bottom;
 
             var boundingBoxPixels = new List<int>(); //values 0 to 255
-            for (var x = Math.Max(0, left); x <= Math.Min(width, right); x++)
+            for (var x = Math.Max(0, left); x <= Math.Min(Width, right); x++)
             {
-                for (var y = Math.Max(0, top); y <= Math.Min(height, bottom); y++)
+                for (var y = Math.Max(0, top); y <= Math.Min(Height, bottom); y++)
                 {
-                    var index = (height - y) * width + x;
+                    var index = (Height - y) * Width + x;
                     boundingBoxPixels.Add( (int) (abImagePixels[index].r * 255));
                 }
             }
@@ -61,11 +62,11 @@ public static class TagsManager
 
             // Find the indices of the foreground pixels in the original image
             var foregroundPixels = new List<PixelDepth>();
-            for (var x = Math.Max(0, left); x <= Math.Min(width, right); x++)
+            for (var x = Math.Max(0, left); x <= Math.Min(Width, right); x++)
             {
-                for (var y = Math.Max(0, top); y <= Math.Min(height, bottom); y++)
+                for (var y = Math.Max(0, top); y <= Math.Min(Height, bottom); y++)
                 {
-                    var index = (height - y) * width + x;
+                    var index = (Height - y) * Width + x;
                     var abIntensity = (int) (abImagePixels[index].r * 255);
 
                     if (abIntensity > threshold)
@@ -78,21 +79,16 @@ public static class TagsManager
             }
 
             tag.OtsuForegroundPixels = foregroundPixels;
-
-            //todo: for debugging, delete after
-            tag.OtsuThreshold = threshold;
-            tag.HistogramMaxByte = OtsuThresholding.GetMostFrequentDepthInBBox();
-            tag.HistogramMaxCount = OtsuThresholding.GetCountOfMostFrequentDepthInBBox();
         }
     }
 
-    public static List<Tag> GetTagsWithConfidenceHigherThan(float minimumConfidence, List<Tag> tagsToFilter)
+    public List<Tag> GetTagsWithConfidenceHigherThan(float minimumConfidence, List<Tag> tagsToFilter)
     {
         return tagsToFilter.Where(t => t.Probability > minimumConfidence).ToList();
     }
 
     [CanBeNull]
-    public static List<Tag> GetPredictedTagsFromResult(string result, int depthMapHeight, int depthMapWidth)
+    public List<Tag> GetPredictedTagsFromResult(string result)
     {
         ci.NumberFormat.CurrencyDecimalSeparator = ".";
 
@@ -121,29 +117,29 @@ public static class TagsManager
         {
             var name = new Name(tagNames[i]);
             var probability = probabilities[i];
-            var boundingBox = ConvertToBoundingBox(leftSides[i], topSides[i], widths[i], heights[i], depthMapHeight, depthMapWidth);
+            var boundingBox = ConvertToBoundingBox(leftSides[i], topSides[i], widths[i], heights[i]);
             var tag = new Tag(name, probability, boundingBox);
             predictedTags.Add(tag);
         }
         return predictedTags;
     }
 
-    private static BoundingBox ConvertToBoundingBox(float leftSide, float topSide, float width, float height, int depthMapHeight, int depthMapWidth)
+    private BoundingBox ConvertToBoundingBox(float leftSide, float topSide, float width, float height)
     {
-        var left = (int) (leftSide * depthMapWidth);
-        var right =  left + (int) (width * depthMapWidth);
-        var top = (int) (topSide * depthMapHeight);
-        var bottom = top + (int) (height * depthMapHeight);
+        var left = (int) (leftSide * Width);
+        var right =  left + (int) (width * Width);
+        var top = (int) (topSide * Height);
+        var bottom = top + (int) (height * Height);
 
         return new BoundingBox(left, right, top, bottom);
     }
 
-    private static bool VerifyAllPropertiesHaveEqualElements(int numberOfObjects, List<string> tagNames, List<float> leftSides, List<float> topSides, List<float> widths, List<float> heights)
+    private bool VerifyAllPropertiesHaveEqualElements(int numberOfObjects, List<string> tagNames, List<float> leftSides, List<float> topSides, List<float> widths, List<float> heights)
     {
         return tagNames.Count == numberOfObjects && leftSides.Count == numberOfObjects && topSides.Count == numberOfObjects && widths.Count == numberOfObjects && heights.Count == numberOfObjects;
     }
 
-    private static List<string> GetStringModelObjects(Regex mainRegex, string stringToAnalyze)
+    private List<string> GetStringModelObjects(Regex mainRegex, string stringToAnalyze)
     {
         var matches = mainRegex.Matches(stringToAnalyze);
 
@@ -158,7 +154,7 @@ public static class TagsManager
         return stringList;
     }
 
-    private static List<float> GetFloatModelObjects(Regex mainRegex, string stringToAnalyze, Regex floatRegex, CultureInfo ci)
+    private List<float> GetFloatModelObjects(Regex mainRegex, string stringToAnalyze, Regex floatRegex, CultureInfo ci)
     {
         var matches = mainRegex.Matches(stringToAnalyze);
 

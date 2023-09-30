@@ -8,10 +8,6 @@ public class Tag
 
     public int? Depth { get; set; } = null;
 
-    public int? OtsuThreshold { get; set; } = null; // todo: for debugging
-    public int? HistogramMaxByte { get; set; } = null; // todo: for debugging
-    public int? HistogramMaxCount { get; set; } = null; // todo: for debugging
-
     // Non-database parameters
     public List<PixelDepth>? OtsuForegroundPixels { get; set; } = null;
     public List<PixelDepth>? HeuristicFilteredPixels { get; set; } = null;

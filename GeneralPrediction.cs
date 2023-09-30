@@ -1,4 +1,4 @@
-public class Prediction
+public class GeneralPrediction
 {
     public string Result { get; set; }
 }

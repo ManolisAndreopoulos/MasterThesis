@@ -6,24 +6,6 @@ public static class OtsuThresholding
 {
     private static List<int> _histogramOfIntensities = new List<int>(); // todo: for debugging
 
-
-    // Function to perform Otsu's thresholding on the image
-    //public static byte[] OtsuThresholdImage(int[] pixels)
-    //{
-    //    var histogram = CalculateHistogram(pixels);
-    //    var totalPixels = pixels.Length;
-    //    var threshold = CalculateOtsuThreshold(histogram, totalPixels);
-
-    //    // Create a new image with threshold applied
-    //    byte[] thresholdedImage = new byte[totalPixels];
-    //    for (int i = 0; i < totalPixels; i++)
-    //    {
-    //        thresholdedImage[i] = (pixels[i] > threshold) ? (byte)255 : (byte)0;
-    //    }
-
-    //    return thresholdedImage;
-    //}
-
     // Function to get Otsu's threshold for the image
     public static int GetOtsuThreshold(int[] pixels)
     {
@@ -34,16 +16,6 @@ public static class OtsuThresholding
         var threshold = CalculateOtsuThreshold(histogram, totalPixels);
 
         return threshold;
-    }
-
-    public static int GetMostFrequentDepthInBBox() //todo: for debugging
-    {
-        return _histogramOfIntensities.IndexOf(_histogramOfIntensities.Max());
-    }
-
-    public static int GetCountOfMostFrequentDepthInBBox() //todo: for debugging
-    {
-        return _histogramOfIntensities.Max();
     }
 
     // Function to calculate the histogram of the image
