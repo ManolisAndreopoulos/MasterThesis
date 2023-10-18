@@ -15,7 +15,7 @@ public class ImageAnalyzer : MonoBehaviour
     [SerializeField] private AdjustedImageProvider _adjustedImageProvider;
     [SerializeField] private float MinimumConfidenceForObjectDetection;
 
-    public TextMeshPro outputText;
+    public TextMeshPro OutputText;
 
     [Header("Computer Vision Resource")]
     [SerializeField] private string ComputerVisionEndpoint;
@@ -36,7 +36,7 @@ public class ImageAnalyzer : MonoBehaviour
     /// <summary>
     /// Trigger re-population of the Batch of most recent images
     /// </summary>
-    public event Action AnalysisWasCompleted;
+    //public event Action AnalysisWasCompleted;
 
     private readonly List<string> _wordsIndicateGrasping = new List<string>()
     {
@@ -49,7 +49,7 @@ public class ImageAnalyzer : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        AnalysisWasCompleted += _adjustedImageProvider.PopulateBatchWithNewImages;
+        //AnalysisWasCompleted += _adjustedImageProvider.PopulateBatchWithNewImages;
         //_adjustedImageProvider.ReadyForAnalysis += Detect; //todo: uncomment this after testing
     }
 
@@ -61,7 +61,7 @@ public class ImageAnalyzer : MonoBehaviour
     public async void Analyze()
     {
         var prediction = await AnalyzeWithComputerVision(_adjustedImageProvider.NewAdjustedAbImageBatch.First().InBytes);
-        outputText.text = prediction.Result;
+        OutputText.text = prediction.Result;
 
         var caption = prediction.Result;
 
@@ -71,7 +71,7 @@ public class ImageAnalyzer : MonoBehaviour
             BlobManager.StoreImageAfterComputerVision(_adjustedImageProvider.NewAdjustedAbImageBatch.First());
         }
 
-        AnalysisWasCompleted.Invoke();
+        //AnalysisWasCompleted.Invoke();
     }
 
     private async Task<GeneralPrediction> AnalyzeWithComputerVision(byte[] image)
@@ -141,13 +141,13 @@ public class ImageAnalyzer : MonoBehaviour
 
             var durationOfMultiThreadedOperation = Math.Round(Time.time - totalMultiThreadedStart, 2);
 
-            outputText.text = GetMultiThreadedOutputMessage(results, durationOfMultiThreadedOperation);
+            OutputText.text = GetMultiThreadedOutputMessage(results, durationOfMultiThreadedOperation);
             
             //AnalysisWasCompleted.Invoke();
         }
         catch (Exception e)
         {
-            outputText.text = e.Message;
+            OutputText.text = e.Message;
         }
     }
 

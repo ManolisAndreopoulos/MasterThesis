@@ -14,10 +14,6 @@ public class BlobManager : MonoBehaviour
     [SerializeField]
     string containerName = default; // Replace with your container name where you want to upload the blob
     
-    [Header("Image Resource")]
-    [SerializeField]
-    private AdjustedImageProvider _adjustedImageProvider = null;
-
     [Header("Response")] 
     [SerializeField] 
     private TextMeshPro response = null;
