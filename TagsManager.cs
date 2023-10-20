@@ -36,6 +36,14 @@ public class TagsManager
     // Culture Info for Floating Point
     private static CultureInfo ci = (CultureInfo)CultureInfo.CurrentCulture.Clone();
 
+    public void AugmentTagsWithImageTitle(List<Tag> tags, string adjustedImageImageTitle)
+    {
+        foreach (var tag in tags)
+        {
+            tag.ImageTitle = adjustedImageImageTitle;
+        }
+    }
+
     public void AugmentTagsWithForegroundIndices(List<Tag> tags, Texture2D abImageTexture, ushort[] depthMap)
     {
         var abImagePixels = abImageTexture.GetPixels();
@@ -168,6 +176,5 @@ public class TagsManager
         }
         return floatList;
     }
-
 }
 

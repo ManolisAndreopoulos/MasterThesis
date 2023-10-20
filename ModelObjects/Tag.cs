@@ -11,6 +11,7 @@ public class Tag
     // Non-database parameters
     public List<PixelDepth>? OtsuForegroundPixels { get; set; } = null;
     public List<PixelDepth>? HeuristicFilteredPixels { get; set; } = null;
+    public string ImageTitle { get; set; } = string.Empty;
 
     public Tag(Name name, double probability, BoundingBox boundingBox)
     {

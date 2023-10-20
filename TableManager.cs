@@ -20,11 +20,49 @@ public class TableManager : MonoBehaviour
     private string storageAccountName = "msstorageresource";
     private string tableTagsName = "PredictedTags";
     private string tableRuntimesName = "OperationRuntimes";
+    private string tableMtmActionsName = "MtmActions";
 
-    private string storageAccountKey =
-        "IQQpV3U2AY6VJ21FhmkGAaGKyCQeuNN1sldwKAcwYGFbly+zbfgF3OMsBDg5RVKjnmYQoTtKvebe+AStAjdpfg==";
+    private string storageAccountKey = "IQQpV3U2AY6VJ21FhmkGAaGKyCQeuNN1sldwKAcwYGFbly+zbfgF3OMsBDg5RVKjnmYQoTtKvebe+AStAjdpfg==";
 
     private string _message = string.Empty;
+
+    public async void StoreMtmActions(List<MtmAction> mtmActions)
+    {
+        foreach (var mtmAction in mtmActions)
+        {
+            await InsertMtmActionAsync(mtmAction);
+        }
+        
+    }
+
+    private async Task InsertMtmActionAsync(MtmAction mtmAction)
+    {
+        string tableUrl = $"https://{storageAccountName}.table.core.windows.net/{tableMtmActionsName}";
+
+        // Content
+        string jsonContent = $"{{" +
+                             $"\"Action\":\"{mtmAction.Name}\"," +
+                             $"\"TMU\":{mtmAction.TMU}," +
+                             $"\"Distance\":{mtmAction.Distance}," +
+                             $"\"PartitionKey\":\"Transcription\"," +
+                             $"\"RowKey\":\"{mtmAction.ImageTitle}\"" +
+                             $"}}";
+
+        var httpRequestMessage = SetUpHttpRequestMessage(tableUrl, jsonContent);
+
+        try
+        {
+            // Send the request.
+            using HttpResponseMessage httpResponseMessage = await new HttpClient().SendAsync(httpRequestMessage, CancellationToken.None);
+
+            // Check if the request was successful
+            httpResponseMessage.EnsureSuccessStatusCode();
+        }
+        catch (Exception ex)
+        {
+            //return $"Error {ex.Message}";
+        }
+    }
 
     public async void StoreRuntimes(WorkflowResultContainer workflowResultContainer, string imageName)
     {
@@ -35,20 +73,7 @@ public class TableManager : MonoBehaviour
     {
         string tableUrl = $"https://{storageAccountName}.table.core.windows.net/{tableRuntimesName}";
 
-        // Resources
-        using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, tableUrl);
-
-        // Date
-        var date = DateTime.UtcNow.ToString("R", CultureInfo.InvariantCulture);
-
-        // Request headers
-        httpRequestMessage.Headers.Add("x-ms-date", date);
-        httpRequestMessage.Headers.Add("x-ms-version", "2017-04-17");
-        httpRequestMessage.Headers.Add("DataServiceVersion", "3.0;NetFx");
-        httpRequestMessage.Headers.Add("Accept", "application/json;odata=nometadata");
-
         // Content
-
         string jsonContent = $"{{" +
                              $"\"CustomVision\":\"{workflowResultContainer.RuntimeContainer.CustomVision}\"," +
                              $"\"BlobStorage\":{workflowResultContainer.RuntimeContainer.BlobStorage}," +
@@ -58,15 +83,7 @@ public class TableManager : MonoBehaviour
                              $"\"RowKey\":\"{imageName}\"" +
                              $"}}";
 
-        var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-        httpRequestMessage.Content = content;
-        httpRequestMessage.Content.Headers.ContentLength = Encoding.UTF8.GetByteCount(jsonContent);
-        httpRequestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json"); // Set Content-Type header (optional, but recommended)
-
-
-        // Add the authorization header.
-        httpRequestMessage.Headers.Authorization = AzureStorageAuthenticationHelper.GetTableAuthorizationHeader(storageAccountName, storageAccountKey, httpRequestMessage, date);
+        var httpRequestMessage = SetUpHttpRequestMessage(tableUrl, jsonContent);
 
         try
         {
@@ -98,24 +115,9 @@ public class TableManager : MonoBehaviour
 
     private async Task InsertTagAsync(Tag tag, string imageName, int tagIndex)
     {
-        var success = false;
-
         string tableUrl = $"https://{storageAccountName}.table.core.windows.net/{tableTagsName}";
 
-        // Resources
-        using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, tableUrl);
-
-        // Date
-        var date = DateTime.UtcNow.ToString("R", CultureInfo.InvariantCulture);
-
-        // Request headers
-        httpRequestMessage.Headers.Add("x-ms-date", date);
-        httpRequestMessage.Headers.Add("x-ms-version", "2017-04-17");
-        httpRequestMessage.Headers.Add("DataServiceVersion", "3.0;NetFx");
-        httpRequestMessage.Headers.Add("Accept", "application/json;odata=nometadata");
-
         // Content
-
         string jsonContent = $"{{" +
                              $"\"Name\":\"{tag.Name.Get()}\"," +
                              $"\"Confidence\":{tag.Probability}," +
@@ -128,17 +130,7 @@ public class TableManager : MonoBehaviour
                              $"\"RowKey\":\"{tagIndex}\"" +
                              $"}}";
 
-        var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-        httpRequestMessage.Content = content;
-        httpRequestMessage.Content.Headers.ContentLength = Encoding.UTF8.GetByteCount(jsonContent);
-        httpRequestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json"); // Set Content-Type header (optional, but recommended)
-
-
-        // Add the authorization header.
-        httpRequestMessage.Headers.Authorization =
-            AzureStorageAuthenticationHelper.GetTableAuthorizationHeader(storageAccountName, storageAccountKey,
-                httpRequestMessage, date);
+        var httpRequestMessage = SetUpHttpRequestMessage(tableUrl, jsonContent);
 
         try
         {
@@ -147,12 +139,36 @@ public class TableManager : MonoBehaviour
 
             // Check if the request was successful
             httpResponseMessage.EnsureSuccessStatusCode();
-            //return "Uploaded successfully.";
         }
         catch (Exception ex)
         {
             //return $"Error {ex.Message}";
         }
+    }
+
+    private HttpRequestMessage SetUpHttpRequestMessage(string tableUrl, string jsonContent)
+    {
+        // Resources
+        using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, tableUrl);
+
+        // Date
+        var date = DateTime.UtcNow.ToString("R", CultureInfo.InvariantCulture);
+
+        // Request headers
+        httpRequestMessage.Headers.Add("x-ms-date", date);
+        httpRequestMessage.Headers.Add("x-ms-version", "2017-04-17");
+        httpRequestMessage.Headers.Add("DataServiceVersion", "3.0;NetFx");
+        httpRequestMessage.Headers.Add("Accept", "application/json;odata=nometadata");
+
+        var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+        httpRequestMessage.Content = content;
+        httpRequestMessage.Content.Headers.ContentLength = Encoding.UTF8.GetByteCount(jsonContent);
+        httpRequestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json"); // Set Content-Type header (optional, but recommended)
+
+        // Add the authorization header.
+        httpRequestMessage.Headers.Authorization = AzureStorageAuthenticationHelper.GetTableAuthorizationHeader(storageAccountName, storageAccountKey, httpRequestMessage, date);
+        return httpRequestMessage;
     }
 }
 

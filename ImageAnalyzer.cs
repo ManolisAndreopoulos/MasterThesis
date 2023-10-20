@@ -123,7 +123,7 @@ public class ImageAnalyzer : MonoBehaviour
 
         // Create an array to store the results
         var elementCount = _adjustedImageProvider.NewAdjustedAbImageBatch.Count;
-        var results = new Task<WorkflowResultContainer>[elementCount];
+        var taskResults = new Task<WorkflowResultContainer>[elementCount];
 
         //Profiling total multi-threaded operation
         var totalMultiThreadedStart = Time.time;
@@ -133,16 +133,28 @@ public class ImageAnalyzer : MonoBehaviour
             for (var i = 0; i < elementCount; i++)
             {
                 var adjustedImage = _adjustedImageProvider.NewAdjustedAbImageBatch[i];
-                results[i] = RunWorkflowAsync(adjustedImage);
+                taskResults[i] = RunWorkflowAsync(adjustedImage);
             }
 
             // Wait for all tasks to complete
-            await Task.WhenAll(results);
+            await Task.WhenAll(taskResults);
 
             var durationOfMultiThreadedOperation = Math.Round(Time.time - totalMultiThreadedStart, 2);
 
+            //Map results to a List
+            List<WorkflowResultContainer> results = new List<WorkflowResultContainer>();
+            foreach (var taskResult in taskResults)
+            {
+                results.Add(taskResult.Result);
+            }
+
             OutputText.text = GetMultiThreadedOutputMessage(results, durationOfMultiThreadedOperation);
-            
+
+            var mtmTranscriber = new MtmTranscriber();
+            var mtmActions = mtmTranscriber.GetMTMActionsFromTags(results);
+
+            TableManager.StoreMtmActions(mtmActions);
+
             //AnalysisWasCompleted.Invoke();
         }
         catch (Exception e)
@@ -151,13 +163,13 @@ public class ImageAnalyzer : MonoBehaviour
         }
     }
 
-    private string GetMultiThreadedOutputMessage(Task<WorkflowResultContainer>[] results, double durationOfMultiThreadedOperation)
+    private string GetMultiThreadedOutputMessage(List<WorkflowResultContainer> results, double durationOfMultiThreadedOperation)
     {
         var message = string.Empty;
 
-        for (var i = 0; i < results.Length; i++)
+        for (var i = 0; i < results.Count; i++)
         {
-            var result = results[i].Result;
+            var result = results[i];
 
             if (!result.TagsWereFound)
             {
@@ -207,6 +219,7 @@ public class ImageAnalyzer : MonoBehaviour
         //    adjustedImage.TimeImageWasCaptured
         //);
 
+        tagManager.AugmentTagsWithImageTitle(filteredTags, adjustedImage.ImageTitle);
         tagManager.AugmentTagsWithForegroundIndices(filteredTags, adjustedImage.Texture, adjustedImage.DepthMap);
 
         var depthUtilities = new DepthUtilities();
@@ -214,10 +227,9 @@ public class ImageAnalyzer : MonoBehaviour
 
         var imageWithBoundingBoxes = new AdjustedImage(
             imageUtilities.AugmentImageWithBoundingBoxesAndDepth(filteredTags, adjustedImage.Texture),
-            "BBoxImage" + adjustedImage.ImageTitle,
+            adjustedImage.ImageTitle,
             adjustedImage.TimeImageWasCaptured
             );
-        
 
         var blobStartTime = Time.time; // Profiling
         //BlobManager.StoreImageAfterComputerVision(adjustedImage);
@@ -233,7 +245,7 @@ public class ImageAnalyzer : MonoBehaviour
         var totalOperationDuration = Math.Round(Time.time - totalOperationStartTime, 2); // Profiling
         var runtimes = new RuntimeContainer(customVisionDuration, blobDuration, tableDuration, totalOperationDuration);
 
-        var workflowResultContainer = new WorkflowResultContainer(runtimes, true);
+        var workflowResultContainer = new WorkflowResultContainer(filteredTags, runtimes, true);
 
         TableManager.StoreRuntimes(workflowResultContainer, adjustedImage.ImageTitle);
 

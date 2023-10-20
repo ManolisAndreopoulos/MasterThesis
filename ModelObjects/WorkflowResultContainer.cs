@@ -1,16 +1,19 @@
 using System;
+using System.Collections.Generic;
 
 public class WorkflowResultContainer //todo: rename
 {
     public RuntimeContainer RuntimeContainer { get; set; }
     public string Message { get; set; }
     public bool TagsWereFound { get; private set; }
+    public List<Tag> Tags { get; private set; }
 
-    public WorkflowResultContainer(RuntimeContainer runtimeContainer, bool tagsWereFound)
+    public WorkflowResultContainer(List<Tag> tags, RuntimeContainer runtimeContainer, bool tagsWereFound)
     {
         RuntimeContainer = runtimeContainer;
         Message = GetRuntimeProfilingMessage(runtimeContainer);
         TagsWereFound = tagsWereFound;
+        Tags = tags;
     }
 
     public WorkflowResultContainer(string message, bool tagsWereFound)
