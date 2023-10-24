@@ -68,7 +68,7 @@ public class TagsManager
 
             var threshold = OtsuThresholding.GetOtsuThreshold(boundingBoxPixels.ToArray());
 
-            // Find the indices of the foreground pixels in the original image
+            // Find the indices of the foreground pixels in the adjusted image
             var foregroundPixels = new List<PixelDepth>();
             for (var x = Math.Max(0, left); x <= Math.Min(Width, right); x++)
             {
@@ -79,8 +79,10 @@ public class TagsManager
 
                     if (abIntensity > threshold)
                     {
+                        var pixelPositionX = x;
+                        var pixelPositionY = Height - y;
                         var depth = depthMap[index];
-                        var pixelDepth = new PixelDepth(index, depth);
+                        var pixelDepth = new PixelDepth(index, depth, pixelPositionX, pixelPositionY);
                         foregroundPixels.Add(pixelDepth);
                     }
                 }

@@ -10,10 +10,6 @@ using UnityEngine;
 
 public class BlobManager : MonoBehaviour
 {
-    [Header("Azure Storage")]
-    [SerializeField]
-    string containerName = default; // Replace with your container name where you want to upload the blob
-    
     [Header("Response")] 
     [SerializeField] 
     private TextMeshPro response = null;
@@ -21,28 +17,30 @@ public class BlobManager : MonoBehaviour
     // Replace with your Azure Storage account name and access key or connection string
     private const string StorageAccountName = "msstorageresource";
     private const string StorageAccountKey = "IQQpV3U2AY6VJ21FhmkGAaGKyCQeuNN1sldwKAcwYGFbly+zbfgF3OMsBDg5RVKjnmYQoTtKvebe+AStAjdpfg==";
-    private string _blobName; // Replace with your blob name (the name you want to give to the uploaded PNG AbRawImage)
-    
+
+    private string defaultContainerName = "ab-images";
+    private string trainingImagesContainerName = "training-images";
+
     private string _message = string.Empty;
 
-    //public async Task StoreImageAfterComputerVision(string imageName, byte[] pngImage)
-    //{
-    //    _blobName = imageName;
-    //    _message = _blobName + " : " + await PutBlobAsync(adjustedImage);
-    //}
-
-    public async void StoreImageAfterComputerVision(AdjustedImage adjustedImage)
+    public async Task<string> StoreImage(AdjustedImage adjustedImage)
     {
-        _blobName = adjustedImage.ImageTitle;
-        _message = _blobName + " : " + await PutBlobAsync(adjustedImage);
+        _message = adjustedImage.ImageTitle + " : " + await PutBlobAsync(adjustedImage, defaultContainerName);
+        return _message;
     }
 
+    public async Task<string> StoreImageForTraining(AdjustedImage adjustedImage)
+    {
+        _message = adjustedImage.ImageTitle + " : " + await PutBlobAsync(adjustedImage, trainingImagesContainerName);
+        return _message;
+    }
 
-    private async Task<string> PutBlobAsync(AdjustedImage adjustedImage)
+    private async Task<string> PutBlobAsync(AdjustedImage adjustedImage, string containerName)
     {
         var imageInBytes = adjustedImage.InBytes;
 
-        string blobUrl = $"https://{StorageAccountName}.blob.core.windows.net/{containerName}/{_blobName}";
+        var blobName = adjustedImage.ImageTitle;
+        var blobUrl = $"https://{StorageAccountName}.blob.core.windows.net/{containerName}/{blobName}";
 
 
         // Resources

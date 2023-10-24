@@ -13,25 +13,27 @@ public class DepthUtilities
     {
         foreach (var tag in tags)
         {
-            var medianDepth = CalculateMedianDepth(tag.OtsuForegroundPixels);
+            var medianDepth = CalculatePixelDepthWithMedianDepth(tag.OtsuForegroundPixels);
 
-            tag.HeuristicFilteredPixels = ApplyHeuristicFilteringTo(tag.OtsuForegroundPixels, medianDepth);
+            tag.HeuristicFilteredPixels = ApplyHeuristicFilteringTo(tag.OtsuForegroundPixels, medianDepth.Depth);
 
-            var estimatedDepth = EstimateObjectDepth(tag.HeuristicFilteredPixels); 
+            var estimatedPixelDepth = EstimateObjectPixelDepth(tag.HeuristicFilteredPixels); 
 
-            if (estimatedDepth == null)
+            if (estimatedPixelDepth == null)
             {
                 tag.Depth = 0;
+                tag.PixelTakenForDepth = null;
                 return;
             }
 
-            tag.Depth = estimatedDepth;
+            tag.PixelTakenForDepth = estimatedPixelDepth;
+            tag.Depth = estimatedPixelDepth.Depth;
         }
     }
 
-    private int? EstimateObjectDepth(List<PixelDepth> tagHeuristicFilteredPixels)
+    private PixelDepth? EstimateObjectPixelDepth(List<PixelDepth> tagHeuristicFilteredPixels)
     {
-        return CalculateMedianDepth(tagHeuristicFilteredPixels);
+        return CalculatePixelDepthWithMedianDepth(tagHeuristicFilteredPixels);
     }
 
     private List<PixelDepth> ApplyHeuristicFilteringTo(List<PixelDepth> tagOtsuForegroundPixels, int medianDepth)
@@ -71,7 +73,7 @@ public class DepthUtilities
         return enclosedDepths.ToArray();
     }
 
-    private int CalculateMedianDepth(List<PixelDepth> pixelDepths)
+    private PixelDepth CalculatePixelDepthWithMedianDepth(List<PixelDepth> pixelDepths)
     {
         if (pixelDepths.Count == 0)
         {
@@ -86,15 +88,19 @@ public class DepthUtilities
 
         // Sort the list in ascending order
         depths.Sort();
-
         var middle = depths.Count / 2;
 
         // If there are an odd number of elements, return the middle value
-        if (depths.Count % 2 != 0) return depths[middle];
+        if (depths.Count % 2 != 0)
+        {
+            var medianDepth = depths[middle];
 
-        // If there are an even number of elements, average the two middle values
-        var leftMiddleValue = depths[middle - 1];
-        var rightMiddleValue = depths[middle];
-        return (leftMiddleValue + rightMiddleValue) / 2;
+            return pixelDepths.Find(p => p.Depth == medianDepth);
+        }
+
+        // If there are an even number of elements, take one of the two values (currently left, since this kind of granularity does not really matter)
+        var leftMedianDepth = depths[middle - 1];
+
+        return pixelDepths.Find(p => p.Depth == leftMedianDepth);
     }
 }

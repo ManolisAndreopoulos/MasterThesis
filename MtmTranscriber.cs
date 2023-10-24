@@ -9,6 +9,11 @@ public class MtmTranscriber
     private Hand leftHand = new LeftHand();
     private Hand rightHand = new RightHand();
 
+    private Get lastLeftGet = null;
+    private Get lastRightGet = null;
+
+    private WorldPositionGenerator worldPositionGenerator = new WorldPositionGenerator();
+
     public List<MtmAction> GetMTMActionsFromTags(List<WorkflowResultContainer> results)
     {
         List<MtmAction> MTMActionsToTranscribe = new List<MtmAction>();
@@ -29,10 +34,12 @@ public class MtmTranscriber
 
         if (actionLeftHand != null)
         {
+            lastLeftGet = actionLeftHand.GetType() == typeof(Get) ? (Get)actionLeftHand : null; //Store Get to use later for Put distance
             MTMActionsToTranscribe.Add(actionLeftHand);
         }
         if (actionRightHand != null)
         {
+            lastRightGet = actionRightHand.GetType() == typeof(Get) ? (Get)actionRightHand : null; //Store Get to use later for Put distance
             MTMActionsToTranscribe.Add(actionRightHand);
         }
 
@@ -52,9 +59,9 @@ public class MtmTranscriber
 
             hand.State = "get";
             var highestConfidenceTag = FindTagWithHighestConfidence(getTags);
-            var depth = highestConfidenceTag.Depth ?? 0;
+            var worldPosition = worldPositionGenerator.GetWorldPositionFromPixel(highestConfidenceTag.PixelTakenForDepth);
             var imageTitle = highestConfidenceTag.ImageTitle;
-            var getAction = new Get(depth, imageTitle);
+            var getAction = new Get(worldPosition, imageTitle);
             return getAction;
         }
         else
@@ -63,9 +70,9 @@ public class MtmTranscriber
 
             hand.State = "empty";
             var highestConfidenceTag = FindTagWithHighestConfidence(emptyTags);
-            var depth = highestConfidenceTag.Depth ?? 0;
+            var worldPosition = worldPositionGenerator.GetWorldPositionFromPixel(highestConfidenceTag.PixelTakenForDepth);
             var imageTitle = highestConfidenceTag.ImageTitle;
-            var putAction = new Put(depth, imageTitle);
+            var putAction = new Put(worldPosition, imageTitle);
             return putAction;
         }
     }

@@ -44,6 +44,9 @@ public class TableManager : MonoBehaviour
                              $"\"Action\":\"{mtmAction.Name}\"," +
                              $"\"TMU\":{mtmAction.TMU}," +
                              $"\"Distance\":{mtmAction.Distance}," +
+                             $"\"WorldX\":{(double)mtmAction.WorldPosition.x}," +
+                             $"\"WorldY\":{(double)mtmAction.WorldPosition.y}," +
+                             $"\"WorldZ\":{(double)mtmAction.WorldPosition.z}," +
                              $"\"PartitionKey\":\"Transcription\"," +
                              $"\"RowKey\":\"{mtmAction.ImageTitle}\"" +
                              $"}}";

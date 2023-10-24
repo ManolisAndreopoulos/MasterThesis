@@ -11,29 +11,35 @@ public class AdjustedImageProvider : MonoBehaviour
 
     //public event Action ReadyForAnalysis;
     public List<AdjustedImage> NewAdjustedAbImageBatch { get; private set; } = new List<AdjustedImage>();
+    public bool DetectWorkflowIsTriggered { get; set; } = false;
+
+    public bool EnoughImagesAreCaptured => _adjustedAbImageBuffer.Count >= BatchSize;
+
 
     private const int BatchSize = 4;
     private const float TimerForCapturingNewImageInSeconds = 0.25f;
     private const int MaxElementsInBuffer = 40;
 
-
-    private Queue<AdjustedImage> _adjustedAbImageBuffer;
+    private ImageUtilities _imageUtilities = new ImageUtilities();
+    private static Queue<AdjustedImage> _adjustedAbImageBuffer = new Queue<AdjustedImage>();
     private float _timeLastUpdatedProcessedImages;
     private readonly object _lock = new object();
 
     // Start is called before the first frame update
     void Start()
     {
+        DetectWorkflowIsTriggered = false;
         _timeLastUpdatedProcessedImages = Time.time;
-        _adjustedAbImageBuffer = new Queue<AdjustedImage>();
     }
 
     // Update is called once per frame
     void Update()
     {
+        if(!DetectWorkflowIsTriggered) return; // Do not start queueing before the first Detect
+
         if (TimerRinging(TimerForCapturingNewImageInSeconds))
         {
-            if (_adjustedAbImageBuffer.Count == MaxElementsInBuffer)
+            if (_adjustedAbImageBuffer.Count >= MaxElementsInBuffer) // Dequeue the oldest batch from the queue if the max capacity has been exceeded
             {
                 for (var i = 0; i < BatchSize; i++)
                 {
@@ -69,10 +75,9 @@ public class AdjustedImageProvider : MonoBehaviour
         return true;
     }
 
-    private AdjustedImage GetCurrentAdjustedABImage()
+    public AdjustedImage GetCurrentAdjustedABImage()
     {
-        var imageUtilities = new ImageUtilities();
-        return imageUtilities.AdjustBrightnessContrastAndRotate(AbRawImage.texture as Texture2D, DepthStreamProvider.DepthFrameData);
+        return _imageUtilities.AdjustBrightnessContrastAndRotate(AbRawImage.texture as Texture2D, DepthStreamProvider.DepthFrameData);
     }
 }
 

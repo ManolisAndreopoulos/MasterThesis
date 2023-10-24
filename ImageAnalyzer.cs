@@ -49,13 +49,22 @@ public class ImageAnalyzer : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        //AnalysisWasCompleted += _adjustedImageProvider.PopulateBatchWithNewImages;
-        //_adjustedImageProvider.ReadyForAnalysis += Detect; //todo: uncomment this after testing
     }
 
     // Update is called once per frame
     void Update()
     {
+    }
+
+    public void StoreImage()
+    {
+        StoreImageInternal();
+    }
+
+    private async Task StoreImageInternal()
+    {
+        var image = _adjustedImageProvider.GetCurrentAdjustedABImage();
+        OutputText.text = await BlobManager.StoreImageForTraining(image);
     }
 
     public async void Analyze()
@@ -68,7 +77,7 @@ public class ImageAnalyzer : MonoBehaviour
         //Iterate through the list of buzzwords
         if (_wordsIndicateGrasping.Any(word => caption.Contains(word)))
         {
-            BlobManager.StoreImageAfterComputerVision(_adjustedImageProvider.NewAdjustedAbImageBatch.First());
+            BlobManager.StoreImage(_adjustedImageProvider.NewAdjustedAbImageBatch.First());
         }
 
         //AnalysisWasCompleted.Invoke();
@@ -117,8 +126,16 @@ public class ImageAnalyzer : MonoBehaviour
         return prediction;
     }
 
-    public async void Detect() //todo: trigger this through an event when 
+    public async void Detect()
     {
+        _adjustedImageProvider.DetectWorkflowIsTriggered = true;
+
+        if (!_adjustedImageProvider.EnoughImagesAreCaptured)
+        {
+            OutputText.text = "Not enough images are stored, try again in a second.";
+            return;
+        }
+
         _adjustedImageProvider.PopulateBatchWithNewImages();
 
         // Create an array to store the results
@@ -232,9 +249,9 @@ public class ImageAnalyzer : MonoBehaviour
             );
 
         var blobStartTime = Time.time; // Profiling
-        //BlobManager.StoreImageAfterComputerVision(adjustedImage);
-        BlobManager.StoreImageAfterComputerVision(imageWithBoundingBoxes);
-        //BlobManager.StoreImageAfterComputerVision(depthImage);
+        //BlobManager.StoreImage(adjustedImage);
+        BlobManager.StoreImage(imageWithBoundingBoxes);
+        //BlobManager.StoreImage(depthImage);
         var blobDuration = Math.Round(Time.time - blobStartTime, 2); // Profiling
 
         var tableStartTime = Time.time; // Profiling

@@ -9,6 +9,7 @@ public class Tag
     public int? Depth { get; set; } = null;
 
     // Non-database parameters
+    public PixelDepth PixelTakenForDepth { get; set; } = null;
     public List<PixelDepth>? OtsuForegroundPixels { get; set; } = null;
     public List<PixelDepth>? HeuristicFilteredPixels { get; set; } = null;
     public string ImageTitle { get; set; } = string.Empty;

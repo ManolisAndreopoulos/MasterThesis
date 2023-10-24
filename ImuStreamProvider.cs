@@ -48,7 +48,7 @@ public class ImuStreamProvider : MonoBehaviour
 
     void Update()
     {
-        ImuOutputText.text = _accelerationOutputTextBuffer + _gyroscopeOutputTextBuffer;
+        //ImuOutputText.text = _accelerationOutputTextBuffer + _gyroscopeOutputTextBuffer; //todo: uncomment if needed
     }
 
     void LateUpdate()
