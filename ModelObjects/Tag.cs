@@ -6,7 +6,7 @@ public class Tag
     public double Probability { get; private set; }
     public BoundingBox BoundingBox { get; private set; }
 
-    public int? Depth { get; set; } = null;
+    public int? Depth { get; set; } = 0;
 
     // Non-database parameters
     public PixelDepth PixelTakenForDepth { get; set; } = null;

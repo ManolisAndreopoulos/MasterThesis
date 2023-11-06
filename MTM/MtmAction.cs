@@ -7,5 +7,6 @@ public abstract class MtmAction
     public int TMU { get; set; }
     public int? Distance { get; set; } = null;
     public string ImageTitle { get; set; } = string.Empty;
-    public Vector3 WorldPosition { get; set; }
+    public Vector3 WorldPosition { get; set; } = new Vector3();
+    public string Hand { get; set; } //only for Get and Put
 }

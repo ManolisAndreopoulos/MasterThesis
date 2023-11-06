@@ -11,7 +11,8 @@ public class PixelDepth
     /// Origin for y-axis is the bottom edge of the image
     /// </summary>
     public int PixelPositionY { get; }
-        public ushort Depth { get; }
+    public ushort Depth { get; }
+
     public PixelDepth(int transformedIndex, ushort depth, int pixelPositionX, int pixelPositionY)
     {
         Index = transformedIndex;

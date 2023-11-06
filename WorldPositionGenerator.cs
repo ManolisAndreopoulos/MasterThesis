@@ -52,6 +52,4 @@ public class WorldPositionGenerator : MonoBehaviour
 
         return message;
     }
-
-
 }

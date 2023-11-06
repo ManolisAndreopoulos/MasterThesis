@@ -17,14 +17,7 @@ public class DepthUtilities
 
             tag.HeuristicFilteredPixels = ApplyHeuristicFilteringTo(tag.OtsuForegroundPixels, medianDepth.Depth);
 
-            var estimatedPixelDepth = EstimateObjectPixelDepth(tag.HeuristicFilteredPixels); 
-
-            if (estimatedPixelDepth == null)
-            {
-                tag.Depth = 0;
-                tag.PixelTakenForDepth = null;
-                return;
-            }
+            var estimatedPixelDepth = EstimateObjectPixelDepth(tag.HeuristicFilteredPixels);
 
             tag.PixelTakenForDepth = estimatedPixelDepth;
             tag.Depth = estimatedPixelDepth.Depth;

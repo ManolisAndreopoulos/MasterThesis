@@ -8,14 +8,16 @@ using TMPro;
 using System.Linq;
 using System.Threading;
 using JetBrains.Annotations;
+using System.Diagnostics;
 using Object = System.Object;
 
 public class ImageAnalyzer : MonoBehaviour
 {
+    public TextMeshPro OutputText;
+    public MtmTranscriber MtmTranscriber = null;
+
     [SerializeField] private AdjustedImageProvider _adjustedImageProvider;
     [SerializeField] private float MinimumConfidenceForObjectDetection;
-
-    public TextMeshPro OutputText;
 
     [Header("Computer Vision Resource")]
     [SerializeField] private string ComputerVisionEndpoint;
@@ -56,15 +58,11 @@ public class ImageAnalyzer : MonoBehaviour
     {
     }
 
-    public void StoreImage()
-    {
-        StoreImageInternal();
-    }
-
-    private async Task StoreImageInternal()
+    public async void StoreImage()
     {
         var image = _adjustedImageProvider.GetCurrentAdjustedABImage();
-        OutputText.text = await BlobManager.StoreImageForTraining(image);
+        var operationMessage = await BlobManager.StoreImageForTraining(image);
+        OutputText.text = operationMessage;
     }
 
     public async void Analyze()
@@ -79,8 +77,6 @@ public class ImageAnalyzer : MonoBehaviour
         {
             BlobManager.StoreImage(_adjustedImageProvider.NewAdjustedAbImageBatch.First());
         }
-
-        //AnalysisWasCompleted.Invoke();
     }
 
     private async Task<GeneralPrediction> AnalyzeWithComputerVision(byte[] image)
@@ -128,12 +124,19 @@ public class ImageAnalyzer : MonoBehaviour
 
     public async void Detect()
     {
+        var operationMessage = await Task.Run(DetectInternal);
+        OutputText.text = operationMessage;
+    }
+
+    private async Task<string> DetectInternal()
+    {
+        string operationMessage;
+
         _adjustedImageProvider.DetectWorkflowIsTriggered = true;
 
         if (!_adjustedImageProvider.EnoughImagesAreCaptured)
         {
-            OutputText.text = "Not enough images are stored, try again in a second.";
-            return;
+            return "Not enough images are stored, try again in a second.";
         }
 
         _adjustedImageProvider.PopulateBatchWithNewImages();
@@ -143,7 +146,7 @@ public class ImageAnalyzer : MonoBehaviour
         var taskResults = new Task<WorkflowResultContainer>[elementCount];
 
         //Profiling total multi-threaded operation
-        var totalMultiThreadedStart = Time.time;
+        var totalMultiThreadedStopwatch = Stopwatch.StartNew();
 
         try
         {
@@ -156,7 +159,9 @@ public class ImageAnalyzer : MonoBehaviour
             // Wait for all tasks to complete
             await Task.WhenAll(taskResults);
 
-            var durationOfMultiThreadedOperation = Math.Round(Time.time - totalMultiThreadedStart, 2);
+            totalMultiThreadedStopwatch.Stop();
+
+            var durationOfMultiThreadedOperationInSeconds = Math.Round(totalMultiThreadedStopwatch.ElapsedMilliseconds / 1000.0, 2);
 
             //Map results to a List
             List<WorkflowResultContainer> results = new List<WorkflowResultContainer>();
@@ -165,22 +170,29 @@ public class ImageAnalyzer : MonoBehaviour
                 results.Add(taskResult.Result);
             }
 
-            OutputText.text = GetMultiThreadedOutputMessage(results, durationOfMultiThreadedOperation);
+            operationMessage = GetMultiThreadedOutputMessage(results, durationOfMultiThreadedOperationInSeconds);
 
-            var mtmTranscriber = new MtmTranscriber();
-            var mtmActions = mtmTranscriber.GetMTMActionsFromTags(results);
+            var mtmActions = MtmTranscriber.GetMTMActionsFromTags(results);
+            //operationMessage = MtmTranscriber.DebugMessage; //todo: delete after debugging
 
-            TableManager.StoreMtmActions(mtmActions);
+            foreach (var action in mtmActions)
+            {
+                operationMessage += action.Name + "was transcribed\n";
+            }
 
-            //AnalysisWasCompleted.Invoke();
+            if (mtmActions.Count > 0)
+            {
+                TableManager.StoreMtmActions(mtmActions);
+            }
         }
         catch (Exception e)
         {
-            OutputText.text = e.Message;
+            operationMessage = e.Message;
         }
+        return operationMessage;
     }
 
-    private string GetMultiThreadedOutputMessage(List<WorkflowResultContainer> results, double durationOfMultiThreadedOperation)
+    private string GetMultiThreadedOutputMessage(List<WorkflowResultContainer> results, double durationOfMultiThreadedOperationInSeconds)
     {
         var message = string.Empty;
 
@@ -197,18 +209,21 @@ public class ImageAnalyzer : MonoBehaviour
             message += $"Image {i} Vision Duration: {result.RuntimeContainer.CustomVision}s\n";
         }
 
-        message += $"Total Workflow Duration: {durationOfMultiThreadedOperation}s";
+        message += $"Total Workflow Duration: {durationOfMultiThreadedOperationInSeconds}s\n\n";
 
         return message;
     }
 
     private async Task<WorkflowResultContainer> RunWorkflowAsync(AdjustedImage adjustedImage)
     {
-        var totalOperationStartTime = Time.time; // Profiling
+        var totalOperationStopwatch = Stopwatch.StartNew(); // Profiling
+        var customVisionStopwatch = Stopwatch.StartNew(); // Profiling
 
         var customVisionResult = await DetectWithCustomVision(adjustedImage.InBytes);
 
-        var customVisionDuration = Math.Round(Time.time - totalOperationStartTime, 2); // Profiling
+        customVisionStopwatch.Stop();
+
+        var customVisionDuration = Math.Round(customVisionStopwatch.ElapsedMilliseconds / 1000.0, 2); // Profiling
 
         var tagManager = new TagsManager();
 
@@ -248,19 +263,16 @@ public class ImageAnalyzer : MonoBehaviour
             adjustedImage.TimeImageWasCaptured
             );
 
-        var blobStartTime = Time.time; // Profiling
         //BlobManager.StoreImage(adjustedImage);
         BlobManager.StoreImage(imageWithBoundingBoxes);
         //BlobManager.StoreImage(depthImage);
-        var blobDuration = Math.Round(Time.time - blobStartTime, 2); // Profiling
 
-        var tableStartTime = Time.time; // Profiling
-        TableManager.StoreTags(filteredTags, adjustedImage.ImageTitle);
-        var tableDuration = Math.Round(Time.time - tableStartTime); // Profiling
+        TableManager.StoreTags(filteredTags);
 
         //Profiling
-        var totalOperationDuration = Math.Round(Time.time - totalOperationStartTime, 2); // Profiling
-        var runtimes = new RuntimeContainer(customVisionDuration, blobDuration, tableDuration, totalOperationDuration);
+        totalOperationStopwatch.Stop();
+        var totalOperationDuration = Math.Round(totalOperationStopwatch.ElapsedMilliseconds / 1000.0, 2); // Profiling
+        var runtimes = new RuntimeContainer(customVisionDuration, 0, 0, totalOperationDuration); //blob and table storing durations are zero because they are async and we don't await for their execution
 
         var workflowResultContainer = new WorkflowResultContainer(filteredTags, runtimes, true);
 

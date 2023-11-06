@@ -39,9 +39,12 @@ public class TableManager : MonoBehaviour
     {
         string tableUrl = $"https://{storageAccountName}.table.core.windows.net/{tableMtmActionsName}";
 
+
+        var handColumn = mtmAction.Hand ?? "-";
         // Content
         string jsonContent = $"{{" +
                              $"\"Action\":\"{mtmAction.Name}\"," +
+                             $"\"Hand\":\"{handColumn}\"," +
                              $"\"TMU\":{mtmAction.TMU}," +
                              $"\"Distance\":{mtmAction.Distance}," +
                              $"\"WorldX\":{(double)mtmAction.WorldPosition.x}," +
@@ -102,21 +105,15 @@ public class TableManager : MonoBehaviour
         }
     }
 
-    public async void StoreTags(List<Tag> tags, string imageName)
+    public async void StoreTags(List<Tag> tags)
     {
-        //_message = string.Empty;
-        //for (var i = 0; i < tags.Count; i++)
-        //{
-        //    _message += $"{tags[i].Name.Get()} : {await InsertTagAsync(tags[i], imageName, i)}\n";
-        //}
-
         for (var i = 0; i < tags.Count; i++)
         {
-            await InsertTagAsync(tags[i], imageName, i);
+            await InsertTagAsync(tags[i], i);
         }
     }
 
-    private async Task InsertTagAsync(Tag tag, string imageName, int tagIndex)
+    private async Task InsertTagAsync(Tag tag, int tagIndex)
     {
         string tableUrl = $"https://{storageAccountName}.table.core.windows.net/{tableTagsName}";
 
@@ -129,7 +126,7 @@ public class TableManager : MonoBehaviour
                              $"\"Top\":{tag.BoundingBox.Top}," +
                              $"\"Bottom\":{tag.BoundingBox.Bottom}," +
                              $"\"Depth\":{tag.Depth}," +
-                             $"\"PartitionKey\":\"{imageName}\"," +
+                             $"\"PartitionKey\":\"{tag.ImageTitle}\"," +
                              $"\"RowKey\":\"{tagIndex}\"" +
                              $"}}";
 
