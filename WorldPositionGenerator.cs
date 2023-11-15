@@ -21,7 +21,7 @@ public class WorldPositionGenerator : MonoBehaviour
 
     void Update()
     {
-        DebuggingText.text = GetDebuggingMessageWithHoloLensTransform();
+        //DebuggingText.text = GetDebuggingMessageWithHoloLensTransform();
     }
 
     public Vector3 GetWorldPositionFromPixel(PixelDepth pixelDepth)

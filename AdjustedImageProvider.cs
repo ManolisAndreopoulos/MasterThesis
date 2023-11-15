@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -39,15 +40,26 @@ public class AdjustedImageProvider : MonoBehaviour
 
         if (TimerRinging(TimerForCapturingNewImageInSeconds))
         {
-            if (_adjustedAbImageBuffer.Count >= MaxElementsInBuffer) // Dequeue the oldest batch from the queue if the max capacity has been exceeded
+            Task.Run(EnqueueNewAbImageAsync);
+        }
+    }
+
+    private async Task EnqueueNewAbImageAsync()
+    {
+        lock (_lock) //todo: check if I should use a different locking object
+        {
+            if (_adjustedAbImageBuffer.Count >=
+                MaxElementsInBuffer) // Dequeue the oldest batch from the queue if the max capacity has been exceeded
             {
                 for (var i = 0; i < BatchSize; i++)
                 {
                     _adjustedAbImageBuffer.Dequeue();
                 }
             }
+
             _adjustedAbImageBuffer.Enqueue(GetCurrentAdjustedABImage());
         }
+        
     }
 
     public void PopulateBatchWithNewImages()

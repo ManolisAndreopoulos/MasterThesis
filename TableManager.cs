@@ -30,28 +30,32 @@ public class TableManager : MonoBehaviour
     {
         foreach (var mtmAction in mtmActions)
         {
-            await InsertMtmActionAsync(mtmAction);
+            if (mtmAction is MtmActionHand hand)
+            {
+                await InsertMtmActionHandAsync(hand);
+            }
+            
         }
         
     }
 
-    private async Task InsertMtmActionAsync(MtmAction mtmAction)
+    private async Task InsertMtmActionHandAsync(MtmActionHand mtmActionHand)
     {
         string tableUrl = $"https://{storageAccountName}.table.core.windows.net/{tableMtmActionsName}";
 
 
-        var handColumn = mtmAction.Hand ?? "-";
+        var handColumn = mtmActionHand.Hand ?? "-";
         // Content
         string jsonContent = $"{{" +
-                             $"\"Action\":\"{mtmAction.Name}\"," +
+                             $"\"Action\":\"{mtmActionHand.Name}\"," +
                              $"\"Hand\":\"{handColumn}\"," +
-                             $"\"TMU\":{mtmAction.TMU}," +
-                             $"\"Distance\":{mtmAction.Distance}," +
-                             $"\"WorldX\":{(double)mtmAction.WorldPosition.x}," +
-                             $"\"WorldY\":{(double)mtmAction.WorldPosition.y}," +
-                             $"\"WorldZ\":{(double)mtmAction.WorldPosition.z}," +
+                             $"\"TMU\":{mtmActionHand.TMU}," +
+                             $"\"Depth\":{mtmActionHand.Depth}," +
+                             $"\"WorldX\":{(double)mtmActionHand.WorldPosition.x}," +
+                             $"\"WorldY\":{(double)mtmActionHand.WorldPosition.y}," +
+                             $"\"WorldZ\":{(double)mtmActionHand.WorldPosition.z}," +
                              $"\"PartitionKey\":\"Transcription\"," +
-                             $"\"RowKey\":\"{mtmAction.ImageTitle}\"" +
+                             $"\"RowKey\":\"{mtmActionHand.ImageTitle}\"" +
                              $"}}";
 
         var httpRequestMessage = SetUpHttpRequestMessage(tableUrl, jsonContent);
