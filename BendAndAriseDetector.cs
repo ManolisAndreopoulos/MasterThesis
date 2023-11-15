@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using TMPro;
 using UnityEngine;
 
@@ -22,9 +23,8 @@ public class BendAndAriseDetector : MonoBehaviour
     public bool StartedBend { get; private set; }
     public bool CompletedPreviousBend { get; private set; } = true;
 
-    private double StartVerticalVelocityThreshold = 0.06;
-    private double VerticalDisplacementThresholdInMeters = 0.3; //todo: change this based on experiments
-    private const int HeadTwistAngleThreshold = 30; //todo: change this based on experiments
+    private double StartVerticalVelocityThreshold = 0.35;
+    private double VerticalDisplacementThresholdInMeters = 0.2; //todo: change this based on experiments
 
     private Vector3 _headPosition = Vector3.zero;
     private Vector3 _headOrthogonalPosition = Vector3.zero;
@@ -33,16 +33,23 @@ public class BendAndAriseDetector : MonoBehaviour
 
     private Vector3 _headOrthogonalPositionAtStartOfBend = Vector3.zero;
 
+    // Action count
     private int _bendAndAriseCount = 0;
 
-    private CameraToOrthogonalPosition _converter = new CameraToOrthogonalPosition();
+    private readonly CameraToOrthogonalPosition _converter = new CameraToOrthogonalPosition();
 
     private float _verticalTravelDistanceForDebugging;
+
+    // Max Bend duration before discarding
+    private Stopwatch _stopwatch;
+    private const int BendTimeThresholdInMilliseconds = 2000;
 
     public void ResetBendAndAriseDetection()
     {
         _bendAndAriseCount = 0;
         StartedBend = false;
+        CompletedPreviousBend = true;
+        _verticalTravelDistanceForDebugging = 0;
     }
 
     public void IncreaseStartVelocity()
@@ -79,45 +86,42 @@ public class BendAndAriseDetector : MonoBehaviour
         DebuggingText.text = GetDebuggingText();
     }
 
-    private string GetDebuggingText()
-    {
-        return $"Bends: {_bendAndAriseCount}\n\n" +
-               $"Vert Displ Threshold:{VerticalDisplacementThresholdInMeters}\n"+
-               $"Position:\n" +
-               $"x:{_headPosition.x:F3}, y:{_headPosition.y:F3}, z:{_headPosition.z:F3}\n" +
-               $"Rotation:\n" +
-               $"x:{_headEulerAngles.x:F3}, y:{_headEulerAngles.y:F3}, z:{_headEulerAngles.z:F3}";
-    }
-
     private void CheckForAction()
     {
-        if (!StartedBend && CompletedPreviousBend && Math.Abs(_headLinearVelocity.y) > StartVerticalVelocityThreshold)
+        // Start of Bend
+        if (!StartedBend && CompletedPreviousBend && _headLinearVelocity.y < -StartVerticalVelocityThreshold)
         {
             StartedBend = true;
-            _headOrthogonalPositionAtStartOfBend = _headPosition;
+            CompletedPreviousBend = true;
+            _headOrthogonalPositionAtStartOfBend = _headOrthogonalPosition;
+
+            ResetTimer();
         }
 
+        //End of Bend
         if (StartedBend)
         {
-            //if (_headOrthogonalPositionAtStartOfBend == Vector3.zero)
-            //{
-            //    StartedBend = false;
-            //    return;
-            //}
-            
+            if (CheckTimerHasPassed())
+            {
+                //Return back to "Start of Bend" detection
+                StartedBend = false;
+                CompletedPreviousBend = true;
+            }
             var verticalTravelDistance = _headOrthogonalPosition.y - _headOrthogonalPositionAtStartOfBend.y;
-            _verticalTravelDistanceForDebugging = verticalTravelDistance;
+            _verticalTravelDistanceForDebugging = verticalTravelDistance; //todo: Delete
             if (verticalTravelDistance < -VerticalDisplacementThresholdInMeters) //Bend
             {
+                StartedBend = false; // so that the code does not enter this if statement again for this Bend&Arise Cycle
                 CompletedPreviousBend = false;
             }
         }
 
+        // End of Arise
         if (!CompletedPreviousBend)
         {
             var verticalTravelDistance = _headOrthogonalPosition.y - _headOrthogonalPositionAtStartOfBend.y;
-            _verticalTravelDistanceForDebugging = verticalTravelDistance;
-            if (verticalTravelDistance > VerticalDisplacementThresholdInMeters) //Arise
+            _verticalTravelDistanceForDebugging = verticalTravelDistance; //todo: Delete
+            if (Math.Abs(verticalTravelDistance) < VerticalDisplacementThresholdInMeters) //Arise
             {
                 StartedBend = false;
                 CompletedPreviousBend = true;
@@ -126,6 +130,49 @@ public class BendAndAriseDetector : MonoBehaviour
             }
         }
     }
+
+    #region Debugging Message Generation
+
+    private string GetDebuggingText()
+    {
+        return $"Bends: {_bendAndAriseCount}\n\n" +
+               $"Vert Vel Thres:{StartVerticalVelocityThreshold}\n" +
+               $"Vert Displ Thre:{VerticalDisplacementThresholdInMeters}\n\n" +
+               $"Velocity:\n" +
+               $"x:{_headLinearVelocity.x:F3}, y:{_headLinearVelocity.y:F3}, z:{_headLinearVelocity.z:F3}\n" +
+               $"VertTravel Dist:{_verticalTravelDistanceForDebugging}\n";
+    }
+
+    private string GetStatesOfFlowchart()
+    {
+        return $"StartedBend: {StartedBend}\n CompletedPrevBend: {CompletedPreviousBend}\n";
+    }
+
+    #endregion
+
+    #region Stopwatch Methods
+
+    private bool CheckTimerHasPassed()
+    {
+        if (_stopwatch == null) return true;
+
+        if (_stopwatch.ElapsedMilliseconds < BendTimeThresholdInMilliseconds)
+        {
+            return false;
+        }
+
+        _stopwatch = null;
+        return true;
+    }
+
+    private void ResetTimer()
+    {
+        _stopwatch = Stopwatch.StartNew();
+    }
+
+    #endregion
+
+    #region Update Methods
 
     private void UpdateCurrentRotationOfHead()
     {
@@ -148,4 +195,6 @@ public class BendAndAriseDetector : MonoBehaviour
         _headLinearVelocity.y = (HololensCamera.transform.position.y - _headPosition.y) / Time.fixedDeltaTime;
         _headLinearVelocity.z = (HololensCamera.transform.position.z - _headPosition.z) / Time.fixedDeltaTime;
     }
+
+    #endregion
 }

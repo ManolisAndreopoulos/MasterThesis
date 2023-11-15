@@ -54,29 +54,35 @@ public class StepDetector : MonoBehaviour
         _verticalTravelDistanceForDebugging = 0;
     }
 
-    //public void Increase()
+    //public void IncreaseMaximumVerticalDisplacement()
     //{
-    //    //MinimumHorizontalDisplacementInMeters += 0.01;
-    //    //StepCycleTimeThresholdInMilliseconds += 50;
-    //    MaximumVerticalDisplacementInMeters += 0.02;
+    //    MaximumVerticalDisplacementInMeters += 0.01;
     //}
 
-    //public void Decrease()
+    //public void DecreaseMaximumVerticalDisplacement()
     //{
-    //    //MinimumHorizontalDisplacementInMeters -= 0.01;
-    //    //StepCycleTimeThresholdInMilliseconds -= 50;
-    //    MaximumVerticalDisplacementInMeters -= 0.02;
+    //    MaximumVerticalDisplacementInMeters -= 0.01;
     //}
 
-    //public void IncreaseStepStartVelocity()
-    //{
-    //    StartVerticalVelocityThreshold += 0.005;
-    //}
+    public void IncreaseMinimumHorizontalDisplacement()
+    {
+        MinimumHorizontalDisplacementInMeters += 0.01;
+    }
 
-    //public void DecreaseStepStartVelocity()
-    //{
-    //    StartVerticalVelocityThreshold -= 0.005;
-    //}
+    public void DecreaseMinimumHorizontalDisplacement()
+    {
+        MinimumHorizontalDisplacementInMeters -= 0.01;
+    }
+
+    public void IncreaseStepStartVelocity()
+    {
+        StartVerticalVelocityThreshold += 0.005;
+    }
+
+    public void DecreaseStepStartVelocity()
+    {
+        StartVerticalVelocityThreshold -= 0.005;
+    }
 
     void FixedUpdate()
     {
@@ -95,20 +101,20 @@ public class StepDetector : MonoBehaviour
     private string GetDebuggingText()
     {
         return $"Steps: {_stepCount}\n\n" +
+               //THRESHOLDS
+               $"Vel Thres:{StartVerticalVelocityThreshold}\n" +
+               $"Dist Thres:{MinimumHorizontalDisplacementInMeters}\n\n" +
+
                //$"Velocity:\n" +
                //$"x:{_headLinearVelocity.x:F2}, y:{_headLinearVelocity.y:F2}, z:{_headLinearVelocity.z:F2}\n" +
                //$"Rotation:\n" +
                //$"x:{_headEulerAngles.x:F1}, y:{_headEulerAngles.y:F1}, z:{_headEulerAngles.z:F1}\n" +
                $"Orthogonal Position:\n" +
                $"x:{_headOrthogonalPosition.x:F1}, y:{_headOrthogonalPosition.y:F1} , z: {_headOrthogonalPosition.z:F1}\n" +
-               $"Vertical Travel Dist:{_verticalTravelDistanceForDebugging}\n" +
-               //$"Travel Distance:{_horizontalPlaneTravelDistanceForDebugging}\n" +
-
-               //THRESHOLDS
-               $"Vel Thres:{StartVerticalVelocityThreshold}\n" +
-               //$"Dist Thres:{MinimumHorizontalDisplacementInMeters}\n" +
-               //$"Time Thres:{StepCycleTimeThresholdInMilliseconds}\n";
-               $"Vertic Thres:{MaximumVerticalDisplacementInMeters}\n";
+               //$"VertTravel Dist:{_verticalTravelDistanceForDebugging}\n";
+               $"Travel Distance:{_horizontalPlaneTravelDistanceForDebugging}\n";
+                //$"Time Thres:{StepCycleTimeThresholdInMilliseconds}\n";
+                //$"Vertic Thres:{MaximumVerticalDisplacementInMeters}\n";
     }
 
     private void CheckForAction()
@@ -124,6 +130,7 @@ public class StepDetector : MonoBehaviour
         }
 
         // Determine step side
+        //todo: not used yet
         if (Started && StepSide == "unknown")
         {
             if (_headEulerAngles.z > HeadTwistAngleThreshold)
@@ -173,6 +180,8 @@ public class StepDetector : MonoBehaviour
         }
     }
 
+    #region Stopwatch Methods
+
     private bool CheckTimerHasPassed()
     {
         if (_stopwatch == null) return true;
@@ -190,6 +199,8 @@ public class StepDetector : MonoBehaviour
     {
         _stopwatch = Stopwatch.StartNew();
     }
+
+    #endregion
 
     private void UpdateCurrentRotationOfHead()
     {
