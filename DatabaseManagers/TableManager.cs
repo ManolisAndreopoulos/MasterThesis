@@ -12,11 +12,6 @@ using UnityEngine;
 
 public class TableManager : MonoBehaviour
 {
-    [Header("Response")]
-    [SerializeField]
-    private TextMeshPro response = null;
-
-
     private string storageAccountName = "msstorageresource";
     private string tableTagsName = "PredictedTags";
     private string tableRuntimesName = "OperationRuntimes";
@@ -86,8 +81,6 @@ public class TableManager : MonoBehaviour
         // Content
         string jsonContent = $"{{" +
                              $"\"CustomVision\":\"{workflowResultContainer.RuntimeContainer.CustomVision}\"," +
-                             $"\"BlobStorage\":{workflowResultContainer.RuntimeContainer.BlobStorage}," +
-                             $"\"TableStorage\":{workflowResultContainer.RuntimeContainer.TableStorage}," +
                              $"\"Total\":{workflowResultContainer.RuntimeContainer.Total}," +
                              $"\"PartitionKey\":\"Detection\"," +
                              $"\"RowKey\":\"{imageName}\"" +

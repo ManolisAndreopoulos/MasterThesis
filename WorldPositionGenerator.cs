@@ -16,13 +16,8 @@ public class WorldPositionGenerator : MonoBehaviour
      */
 
 
-    public TextMeshPro DebuggingText = null;
     public Camera HololensCamera = null;
 
-    void Update()
-    {
-        //DebuggingText.text = GetDebuggingMessageWithHoloLensTransform();
-    }
 
     public Vector3 GetWorldPositionFromPixel(PixelDepth pixelDepth)
     {
@@ -38,7 +33,6 @@ public class WorldPositionGenerator : MonoBehaviour
 
         // Convert the viewport position to world coordinates.
         var worldPosition = HololensCamera.ScreenToWorldPoint(viewportPosition);
-
         return worldPosition;
     }
 

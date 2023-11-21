@@ -44,10 +44,8 @@ public class TagsManager
         }
     }
 
-    public void AugmentTagsWithForegroundIndices(List<Tag> tags, Texture2D abImageTexture, ushort[] depthMap)
+    public void AugmentTagsWithForegroundIndices(List<Tag> tags, Color[] abImagePixels, ushort[] depthMap)
     {
-        var abImagePixels = abImageTexture.GetPixels();
-
         foreach (var tag in tags)
         {
             // boundaries

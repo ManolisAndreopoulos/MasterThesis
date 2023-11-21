@@ -70,17 +70,16 @@ public class ImageUtilities
 
         var image = adjustedImageTexture.EncodeToPNG();
 
-        return new AdjustedImage(image, adjustedImageTexture, depthFrameData);
+        return new AdjustedImage(image, adjustedImageTexture, depthFrameData, adjustedImageTexture.GetPixels());
     }
 
-    public byte[] AugmentImageWithBoundingBoxesAndDepth(List<Tag> tags, Texture2D adjustedImageTexture)
+    public byte[] AugmentImageWithBoundingBoxesAndDepth(List<Tag> tags, AdjustedImage adjustedImage) //todo: run this on the main thread
     {
-        var originalPixels = adjustedImageTexture.GetPixels();
-        var augmentedPixels = originalPixels;
+        var augmentedPixels = adjustedImage.Pixels;
         var boundaryThicknessInPixels = 2;
 
-        var height = adjustedImageTexture.height;
-        var width = adjustedImageTexture.width;
+        var height = adjustedImage.Texture.height;
+        var width = adjustedImage.Texture.width;
 
 
         foreach (var tag in tags)

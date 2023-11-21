@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.MixedReality.Toolkit.Utilities;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,16 +10,14 @@ public class AdjustedImageProvider : MonoBehaviour
     [SerializeField] private DepthStreamProvider DepthStreamProvider = null;
     [SerializeField] private RawImage AbRawImage;
 
-
-    //public event Action ReadyForAnalysis;
     public List<AdjustedImage> NewAdjustedAbImageBatch { get; private set; } = new List<AdjustedImage>();
     public bool DetectWorkflowIsTriggered { get; set; } = false;
 
     public bool EnoughImagesAreCaptured => _adjustedAbImageBuffer.Count >= BatchSize;
 
 
-    private const int BatchSize = 4;
-    private const float TimerForCapturingNewImageInSeconds = 0.25f;
+    private const int BatchSize = 2; // 4;
+    private const float TimerForCapturingNewImageInSeconds = 0.5f; // 0.25f;
     private const int MaxElementsInBuffer = 40;
 
     private ImageUtilities _imageUtilities = new ImageUtilities();
@@ -33,6 +32,8 @@ public class AdjustedImageProvider : MonoBehaviour
         _timeLastUpdatedProcessedImages = Time.time;
     }
 
+    #region Capturing AB Images
+
     // Update is called once per frame
     void Update()
     {
@@ -40,16 +41,21 @@ public class AdjustedImageProvider : MonoBehaviour
 
         if (TimerRinging(TimerForCapturingNewImageInSeconds))
         {
-            Task.Run(EnqueueNewAbImageAsync);
+            //EnqueueNewAbImageAsync();
+            EnqueueNewAbImage();
         }
     }
 
-    private async Task EnqueueNewAbImageAsync()
+    private async void EnqueueNewAbImageAsync()
     {
-        lock (_lock) //todo: check if I should use a different locking object
+        await Task.Run(EnqueueNewAbImageAsyncInternal);
+    }
+
+    private async Task EnqueueNewAbImageAsyncInternal() //todo: delete if synchronous method operates well
+    {
+        lock (_lock)
         {
-            if (_adjustedAbImageBuffer.Count >=
-                MaxElementsInBuffer) // Dequeue the oldest batch from the queue if the max capacity has been exceeded
+            if (_adjustedAbImageBuffer.Count >= MaxElementsInBuffer) // Dequeue the oldest batch from the queue if the max capacity has been exceeded
             {
                 for (var i = 0; i < BatchSize; i++)
                 {
@@ -59,12 +65,37 @@ public class AdjustedImageProvider : MonoBehaviour
 
             _adjustedAbImageBuffer.Enqueue(GetCurrentAdjustedABImage());
         }
-        
     }
 
-    public void PopulateBatchWithNewImages()
+    private void EnqueueNewAbImage()
     {
-        if (_adjustedAbImageBuffer.Count < BatchSize) return;
+        lock (_lock)
+        {
+            if (_adjustedAbImageBuffer.Count >= MaxElementsInBuffer) // Dequeue the oldest batch from the queue if the max capacity has been exceeded
+            {
+                for (var i = 0; i < BatchSize; i++)
+                {
+                    _adjustedAbImageBuffer.Dequeue();
+                }
+            }
+
+            _adjustedAbImageBuffer.Enqueue(GetCurrentAdjustedABImage());
+        }
+    }
+
+
+    public AdjustedImage GetCurrentAdjustedABImage()
+    {
+        return _imageUtilities.AdjustBrightnessContrastAndRotate(AbRawImage.texture as Texture2D, DepthStreamProvider.DepthFrameData);
+    }
+
+    #endregion
+
+    #region Populating Buffer
+
+    public bool PopulateBatchWithNewImages()
+    {
+        if (_adjustedAbImageBuffer.Count < BatchSize) return false;
 
         lock (_lock)
         {
@@ -75,9 +106,12 @@ public class AdjustedImageProvider : MonoBehaviour
             {
                 NewAdjustedAbImageBatch.Add(_adjustedAbImageBuffer.Dequeue());
             }
+
+            return true;
         }
-        //ReadyForAnalysis.Invoke();
     }
+
+    #endregion
 
     private bool TimerRinging(float timerValueInSeconds)
     {
@@ -85,11 +119,6 @@ public class AdjustedImageProvider : MonoBehaviour
         
         _timeLastUpdatedProcessedImages = Time.time;
         return true;
-    }
-
-    public AdjustedImage GetCurrentAdjustedABImage()
-    {
-        return _imageUtilities.AdjustBrightnessContrastAndRotate(AbRawImage.texture as Texture2D, DepthStreamProvider.DepthFrameData);
     }
 }
 

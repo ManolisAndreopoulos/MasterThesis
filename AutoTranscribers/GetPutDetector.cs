@@ -2,9 +2,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Remoting.Messaging;
 using JetBrains.Annotations;
+using TMPro;
 using UnityEngine;
+using UnityEngine.PlayerLoop;
 
-public class MtmTranscriber : MonoBehaviour
+public class GetPutDetector : MonoBehaviour
 {
     public WorldPositionGenerator WorldPositionGenerator = null;
 
@@ -14,11 +16,31 @@ public class MtmTranscriber : MonoBehaviour
     private Get lastLeftGet = null;
     private Get lastRightGet = null;
 
-    public string DebugMessage = string.Empty; //todo: to be deleted
+    public TextMeshPro DebuggingTextInternal = null; //todo: to be deleted
+    private string _debuggingTextInternal = string.Empty; //todo: to be deleted
+    public TextMeshPro DebuggingTextActions = null; //todo: to be deleted
+    private string _debuggingTextActions = string.Empty; //todo: to be deleted
+    private readonly object _lock = new object(); //todo: to be deleted
+
+    private int _getCountRight;
+    private int _getCountLeft;
+    private int _putCountRight;
+    private int _putCountLeft;
+
+    void Update()
+    {
+        UpdateDebuggingMessages();
+    }
+
+    public void UpdateDebuggingMessages()
+    {
+        DebuggingTextInternal.text = _debuggingTextInternal;
+        DebuggingTextActions.text = _debuggingTextActions;
+    }
 
     public List<MtmAction> GetMTMActionsFromTags(List<WorkflowResultContainer> results)
     {
-        DebugMessage = string.Empty;
+        var debuggingTextInternal = string.Empty;
         List<MtmAction> MTMActionsToTranscribe = new List<MtmAction>();
 
         // Aggregate all tags in the batch in a single list
@@ -30,42 +52,77 @@ public class MtmTranscriber : MonoBehaviour
             tags.AddRange(result.Tags);
         }
 
-        DebugMessage += $"{tags.Count} tags where added to list, which are:\n";
+        debuggingTextInternal += $"{tags.Count} tags where added to list, which are:\n";
         foreach (var tag in tags)
         {
-            DebugMessage += $"{tag.Name.Get()},";
+            debuggingTextInternal += $"{tag.Name.Get()},";
         }
 
-        DebugMessage += "\n";
+        debuggingTextInternal += "\n";
 
-        if(tags.Count == 0) { return new List<MtmAction>(); }
+        if (tags.Count == 0)
+        {
+            lock (_lock)
+            {
+                _debuggingTextInternal = debuggingTextInternal;
+                _debuggingTextActions = $"Left Gets: {_getCountLeft}\n" +
+                                        $"Left Puts: {_putCountLeft}\n\n" +
+                                        $"Right Gets: {_getCountRight}\n" +
+                                        $"Right Puts: {_putCountRight}";
+            }
+            return new List<MtmAction>();
+        } //todo: move up
 
         // Getting the overall counts across all tags from the images in the batch
         var leftHandTags = tags.Where(t => SearchTagForWord(t, "left")).ToList();
         var rightHandTags = tags.Where(t => SearchTagForWord(t, "right")).ToList();
 
-        var actionLeftHand = GetActionForHand(leftHandTags, leftHand);
-        var actionRightHand = GetActionForHand(rightHandTags, rightHand);
+        var actionLeftHand = GetActionForHand(leftHandTags, leftHand, debuggingTextInternal);
+        var actionRightHand = GetActionForHand(rightHandTags, rightHand, debuggingTextInternal);
 
         if (actionLeftHand != null)
         {
-            //todo: does not go in here
-            DebugMessage += $"RHA transcribed: {actionRightHand.Name}\n";
-            lastLeftGet = actionLeftHand.Name.Contains("Get") ? (Get)actionLeftHand : null; //Store Get to use later for Put distance
+            if (actionLeftHand.Name == "Get")
+            {
+                _getCountLeft++;
+            }
+            else if (actionLeftHand.Name == "Put")
+            {
+                _putCountLeft++;
+            }
+            
+            lastLeftGet = actionLeftHand.Name == "Get" ? (Get)actionLeftHand : null; //Store Get to use later for Put distance
             MTMActionsToTranscribe.Add(actionLeftHand);
         }
         if (actionRightHand != null)
         {
-            DebugMessage += $"LHA transcribed: {actionLeftHand.Name}\n";
+            if (actionRightHand.Name == "Get")
+            {
+                _getCountRight++;
+            }
+            else if (actionRightHand.Name == "Put")
+            {
+                _getCountRight++;
+            }
+
             lastRightGet = actionRightHand.Name.Contains("Get") ? (Get)actionRightHand : null; //Store Get to use later for Put distance
             MTMActionsToTranscribe.Add(actionRightHand);
+        }
+
+        lock (_lock)
+        {
+            _debuggingTextInternal = debuggingTextInternal;
+            _debuggingTextActions = $"Left Gets: {_getCountLeft}\n" +
+                                    $"Left Puts: {_putCountLeft}\n\n" +
+                                    $"Right Gets: {_getCountRight}\n" +
+                                    $"Right Puts: {_putCountRight}";
         }
 
         return MTMActionsToTranscribe;
     }
 
     [CanBeNull]
-    private MtmAction GetActionForHand(List<Tag> tagsForHand, Hand hand)
+    private MtmAction GetActionForHand(List<Tag> tagsForHand, Hand hand, string debuggingTextInternal) //todo: delete the string debugging parameter 
     {
         var getTags = tagsForHand.Where(t => SearchTagForWord(t, "get")).ToList();
         var emptyTags = tagsForHand.Where(t => SearchTagForWord(t, "empty")).ToList();
@@ -73,13 +130,13 @@ public class MtmTranscriber : MonoBehaviour
         // A single code is transcribed based on all batch images
         if (getTags.Count > emptyTags.Count)
         {
-            if (hand.State.ToLower().Contains("get"))
+            if (hand.CurrentState == "get")
             {
-                DebugMessage += $"{hand.GetType()} Get already transcribed\n";
+                debuggingTextInternal += $"{hand.GetType()} Get already transcribed\n";
                 return null;
             }
 
-            hand.State = "get";
+            hand.CurrentState = "get";
             var highestConfidenceTag = FindTagWithHighestConfidence(getTags);
             if (highestConfidenceTag == null) return null;
             var worldPosition = WorldPositionGenerator.GetWorldPositionFromPixel(highestConfidenceTag.PixelTakenForDepth);
@@ -90,13 +147,13 @@ public class MtmTranscriber : MonoBehaviour
 
         if (getTags.Count < emptyTags.Count)
         {
-            if (hand.State.ToLower().Contains("empty"))
+            if (hand.CurrentState == "empty")
             {
-                DebugMessage += $"{hand.GetType()} Put already transcribed\n";
+                debuggingTextInternal += $"{hand.GetType()} is empty\n";
                 return null;
             }
-
-            hand.State = "empty";
+            
+            hand.CurrentState = "empty";
             var highestConfidenceTag = FindTagWithHighestConfidence(emptyTags);
             if (highestConfidenceTag == null) return null;
             var worldPosition = WorldPositionGenerator.GetWorldPositionFromPixel(highestConfidenceTag.PixelTakenForDepth);

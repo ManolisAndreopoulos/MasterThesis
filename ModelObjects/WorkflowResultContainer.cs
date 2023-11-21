@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 
 public class WorkflowResultContainer //todo: rename
 {
@@ -7,36 +8,35 @@ public class WorkflowResultContainer //todo: rename
     public string Message { get; set; }
     public bool TagsWereFound { get; private set; }
     public List<Tag> Tags { get; private set; }
+    [CanBeNull] public AdjustedImage Image { get; private set; }
 
-    public WorkflowResultContainer(List<Tag> tags, RuntimeContainer runtimeContainer, bool tagsWereFound)
+    public WorkflowResultContainer(List<Tag> tags, RuntimeContainer runtimeContainer, bool tagsWereFound, AdjustedImage adjustedImage)
     {
         RuntimeContainer = runtimeContainer;
         Message = GetRuntimeProfilingMessage(runtimeContainer);
         TagsWereFound = tagsWereFound;
         Tags = tags;
+        Image = adjustedImage;
     }
 
     public WorkflowResultContainer(string message, bool tagsWereFound)
     {
-        RuntimeContainer = new RuntimeContainer(0, 0, 0, 0);
+        RuntimeContainer = new RuntimeContainer(0, 0);
         Message = message;
         TagsWereFound = tagsWereFound;
+        Tags = new List<Tag>();
+        Image = null;
     }
 
     private string GetRuntimeProfilingMessage(RuntimeContainer runtimeContainer)
     {
         var customVisionDurationPercentage = $"{Math.Round(100 * runtimeContainer.CustomVision / runtimeContainer.Total)}%";
-        var blobDurationPercentage = $"{Math.Round(100 * runtimeContainer.BlobStorage / runtimeContainer.Total)}%";
-        var tableDurationPercentage = $"{Math.Round(100 * runtimeContainer.TableStorage / runtimeContainer.Total)}%";
 
         var customVisionDurationMessage =
             $"\nVision Duration: {runtimeContainer.CustomVision}s ({customVisionDurationPercentage})\n";
-        var blobStoreDurationMessage = $"Blob Duration: {runtimeContainer.BlobStorage}s ({blobDurationPercentage})\n";
-        var tableStoreDurationMessage = $"Table Duration: {runtimeContainer.TableStorage}s ({tableDurationPercentage})\n";
         var totalDurationMessage = $"Total Duration: {runtimeContainer.Total}s\n\n";
 
-        var runtimeProfilingMessage = customVisionDurationMessage + blobStoreDurationMessage +
-                                      tableStoreDurationMessage + totalDurationMessage;
+        var runtimeProfilingMessage = customVisionDurationMessage + totalDurationMessage;
         return runtimeProfilingMessage;
     }
 }

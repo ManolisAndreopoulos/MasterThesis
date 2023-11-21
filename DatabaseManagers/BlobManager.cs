@@ -3,17 +3,12 @@ using System.Globalization;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
-using System.Threading.Tasks;
-using TMPro;
+using System.Threading.Tasks; 
 using UnityEngine;
 
 
 public class BlobManager : MonoBehaviour
 {
-    [Header("Response")] 
-    [SerializeField] 
-    private TextMeshPro response = null;
-
     // Replace with your Azure Storage account name and access key or connection string
     private const string StorageAccountName = "msstorageresource";
     private const string StorageAccountKey = "IQQpV3U2AY6VJ21FhmkGAaGKyCQeuNN1sldwKAcwYGFbly+zbfgF3OMsBDg5RVKjnmYQoTtKvebe+AStAjdpfg==";
