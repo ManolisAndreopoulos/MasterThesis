@@ -29,9 +29,7 @@ public class TableManager : MonoBehaviour
             {
                 await InsertMtmActionHandAsync(hand);
             }
-            
         }
-        
     }
 
     private async Task InsertMtmActionHandAsync(MtmActionHand mtmActionHand)

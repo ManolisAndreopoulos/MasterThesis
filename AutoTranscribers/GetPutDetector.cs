@@ -8,7 +8,7 @@ using UnityEngine.PlayerLoop;
 
 public class GetPutDetector : MonoBehaviour
 {
-    public WorldPositionGenerator WorldPositionGenerator = null;
+    public DistanceClassGenerator DistanceClassGenerator = null;
 
     private Hand leftHand = new LeftHand("empty");
     private Hand rightHand = new RightHand("empty");
@@ -102,7 +102,7 @@ public class GetPutDetector : MonoBehaviour
             }
             else if (actionRightHand.Name == "Put")
             {
-                _getCountRight++;
+                _putCountRight++;
             }
 
             lastRightGet = actionRightHand.Name.Contains("Get") ? (Get)actionRightHand : null; //Store Get to use later for Put distance
@@ -139,7 +139,7 @@ public class GetPutDetector : MonoBehaviour
             hand.CurrentState = "get";
             var highestConfidenceTag = FindTagWithHighestConfidence(getTags);
             if (highestConfidenceTag == null) return null;
-            var worldPosition = WorldPositionGenerator.GetWorldPositionFromPixel(highestConfidenceTag.PixelTakenForDepth);
+            var worldPosition = DistanceClassGenerator.GetDistanceClassFromPixel(highestConfidenceTag.PixelTakenForDepth);
             var imageTitle = highestConfidenceTag.ImageTitle;
             var getAction = new Get(worldPosition, imageTitle, hand.GetType().ToString());
             return getAction;
@@ -156,7 +156,7 @@ public class GetPutDetector : MonoBehaviour
             hand.CurrentState = "empty";
             var highestConfidenceTag = FindTagWithHighestConfidence(emptyTags);
             if (highestConfidenceTag == null) return null;
-            var worldPosition = WorldPositionGenerator.GetWorldPositionFromPixel(highestConfidenceTag.PixelTakenForDepth);
+            var worldPosition = DistanceClassGenerator.GetDistanceClassFromPixel(highestConfidenceTag.PixelTakenForDepth);
             var imageTitle = highestConfidenceTag.ImageTitle;
             var putAction = new Put(worldPosition, imageTitle, hand.GetType().ToString());
             return putAction;

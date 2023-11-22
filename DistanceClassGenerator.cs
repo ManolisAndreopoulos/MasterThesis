@@ -1,7 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 
-public class WorldPositionGenerator : MonoBehaviour
+public class DistanceClassGenerator : MonoBehaviour
 {
     /*
      * Coordinate System:
@@ -19,7 +22,7 @@ public class WorldPositionGenerator : MonoBehaviour
     public Camera HololensCamera = null;
 
 
-    public Vector3 GetWorldPositionFromPixel(PixelDepth pixelDepth)
+    public DistanceClass GetDistanceClassFromPixel(PixelDepth pixelDepth)
     {
         // Convert the depth from cm to meters.
         var depthInMeters = pixelDepth.Depth / 100.0f;
@@ -33,7 +36,13 @@ public class WorldPositionGenerator : MonoBehaviour
 
         // Convert the viewport position to world coordinates.
         var worldPosition = HololensCamera.ScreenToWorldPoint(viewportPosition);
-        return worldPosition;
+
+        // Calculate the depth compared to the HoloLens Camera
+        var distanceInCm = (int) Vector3.Distance(worldPosition, HololensCamera.transform.position) * 100;
+
+        var distanceClass = new DistanceClass(worldPosition, distanceInCm);
+
+        return distanceClass;
     }
 
     private string GetDebuggingMessageWithHoloLensTransform()
@@ -46,4 +55,30 @@ public class WorldPositionGenerator : MonoBehaviour
 
         return message;
     }
+}
+
+public class DistanceClass
+{
+    public Vector3 WorldPosition { get; private set; }
+    public int DistanceInCm { get; private set; }
+    public int DistanceClassMtm { get; private set; }
+
+    private static List<int> mtmDistanceClasses = new List<int> {5, 15, 30, 45, 80};
+
+    public DistanceClass(Vector3 worldPosition, int distanceInCm)
+    {
+        WorldPosition = worldPosition;
+        DistanceInCm = distanceInCm;
+        DistanceClassMtm = FindClosestMtmDistanceClass(DistanceInCm);
+    }
+
+    static int FindClosestMtmDistanceClass(int actualDistance)
+    {
+        // Find the closest value using LINQ
+        var closestValue = mtmDistanceClasses.Aggregate((x, y) => Math.Abs(x - actualDistance) < Math.Abs(y - actualDistance) ? x : y);
+
+        return closestValue;
+    }
+
+
 }

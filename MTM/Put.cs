@@ -3,13 +3,13 @@ using Vector3 = UnityEngine.Vector3;
 
 public class Put : MtmActionHand
 {
-    public Put(Vector3 worldPosition, string imageTitle, string hand)
+    public Put(DistanceClass distanceClass, string imageTitle, string hand)
     {
         Name = "Put";
         TMU = 9;
-        Depth = 0; //todo: change that based on the previous get world position
+        Depth = distanceClass.DistanceClassMtm;
         ImageTitle = imageTitle;
-        WorldPosition = worldPosition;
+        WorldPosition = distanceClass.WorldPosition;
         Hand = hand;
     }
 }
