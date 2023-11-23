@@ -5,7 +5,7 @@ using Microsoft.MixedReality.Toolkit.Utilities;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class AdjustedImageProvider : MonoBehaviour
+public class AdjustedImageProviderOnline : MonoBehaviour
 {
     [SerializeField] private DepthStreamProvider DepthStreamProvider = null;
     [SerializeField] private RawImage AbRawImage;
@@ -16,8 +16,8 @@ public class AdjustedImageProvider : MonoBehaviour
     public bool EnoughImagesAreCaptured => _adjustedAbImageBuffer.Count >= BatchSize;
 
 
-    private const int BatchSize = 2; // 4;
-    private const float TimerForCapturingNewImageInSeconds = 0.5f; // 0.25f;
+    private const int BatchSize = 2;
+    private const float TimerForCapturingNewImageInSeconds = 0.25f;
     private const int MaxElementsInBuffer = 40;
 
     private ImageUtilities _imageUtilities = new ImageUtilities();

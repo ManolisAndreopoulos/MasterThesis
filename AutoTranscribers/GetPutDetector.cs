@@ -139,9 +139,9 @@ public class GetPutDetector : MonoBehaviour
             hand.CurrentState = "get";
             var highestConfidenceTag = FindTagWithHighestConfidence(getTags);
             if (highestConfidenceTag == null) return null;
-            var worldPosition = DistanceClassGenerator.GetDistanceClassFromPixel(highestConfidenceTag.PixelTakenForDepth);
+            var distanceClass = DistanceClassGenerator.GetDistanceClassFromPixel(highestConfidenceTag.PixelTakenForDepth);
             var imageTitle = highestConfidenceTag.ImageTitle;
-            var getAction = new Get(worldPosition, imageTitle, hand.GetType().ToString());
+            var getAction = new Get(distanceClass, imageTitle, hand.GetType().ToString());
             return getAction;
         }
 
@@ -156,9 +156,9 @@ public class GetPutDetector : MonoBehaviour
             hand.CurrentState = "empty";
             var highestConfidenceTag = FindTagWithHighestConfidence(emptyTags);
             if (highestConfidenceTag == null) return null;
-            var worldPosition = DistanceClassGenerator.GetDistanceClassFromPixel(highestConfidenceTag.PixelTakenForDepth);
+            var distanceClass = DistanceClassGenerator.GetDistanceClassFromPixel(highestConfidenceTag.PixelTakenForDepth);
             var imageTitle = highestConfidenceTag.ImageTitle;
-            var putAction = new Put(worldPosition, imageTitle, hand.GetType().ToString());
+            var putAction = new Put(distanceClass, imageTitle, hand.GetType().ToString());
             return putAction;
         }
 

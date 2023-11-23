@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using UnityEngine;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -11,12 +12,12 @@ using JetBrains.Annotations;
 using System.Diagnostics;
 using Object = System.Object;
 
-public class ImageAnalyzer : MonoBehaviour
+public class ImageAnalyzerOnline : MonoBehaviour
 {
     public TextMeshPro OutputText;
     public GetPutDetector MtmTranscriber = null;
 
-    [SerializeField] private AdjustedImageProvider _adjustedImageProvider;
+    [SerializeField] private AdjustedImageProviderOnline _adjustedImageProvider;
     [SerializeField] private float MinimumConfidenceForObjectDetection;
 
     [Header("Computer Vision Resource")]
@@ -81,7 +82,7 @@ public class ImageAnalyzer : MonoBehaviour
     {
         try
         {
-            _adjustedImageProvider.DetectWorkflowIsTriggered = true; // 
+            _adjustedImageProvider.DetectWorkflowIsTriggered = true;
             var dataContainer = await Task.Run(DetectInternal);
 
             OutputText.text = dataContainer.OperationMessage;
@@ -169,6 +170,7 @@ public class ImageAnalyzer : MonoBehaviour
             {
                 var adjustedImage = _adjustedImageProvider.NewAdjustedAbImageBatch[i];
                 taskResults[i] = RunWorkflowAsync(adjustedImage);
+                //await Task.Delay(100);
             }
 
             // Wait for all tasks to complete
@@ -176,8 +178,7 @@ public class ImageAnalyzer : MonoBehaviour
 
             totalMultiThreadedStopwatch.Stop();
 
-            var durationOfMultiThreadedOperationInSeconds =
-                Math.Round(totalMultiThreadedStopwatch.ElapsedMilliseconds / 1000.0, 2);
+            var durationOfMultiThreadedOperationInSeconds = Math.Round(totalMultiThreadedStopwatch.ElapsedMilliseconds / 1000.0, 2);
 
             //Map results to a List
             foreach (var taskResult in taskResults)
