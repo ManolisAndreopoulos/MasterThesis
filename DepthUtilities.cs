@@ -48,24 +48,6 @@ public class DepthUtilities
         return filteredPixelDepths;
     }
 
-    private ushort[] FindBBoxEnclosedDepths(ushort[] depthMap, int left, int right, int top, int bottom)
-    {
-        var enclosedDepths = new List<ushort>();
-        for (var x = Math.Max(0, left); x <= Math.Min(Width, right); x++)
-        {
-            for (var y = Math.Max(0, top); y <= Math.Min(Height, bottom); y++)
-            {
-                // Check if (x, y) is within the individual boundary regions
-                if ((x >= left && x <= right) || (y >= top && y <= bottom))
-                {
-                    var index = (Height - y) * Width + x;
-                    enclosedDepths.Add(depthMap[index]);
-                }
-            }
-        }
-        return enclosedDepths.ToArray();
-    }
-
     private PixelDepth CalculatePixelDepthWithMedianDepth(List<PixelDepth> pixelDepths)
     {
         if (pixelDepths.Count == 0)

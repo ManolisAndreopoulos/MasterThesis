@@ -12,10 +12,12 @@ using UnityEngine;
 
 public class TableManager : MonoBehaviour
 {
+    private const string User = "UserX";
+
     private string storageAccountName = "msstorageresource";
-    private string tableTagsName = "PredictedTags";
-    private string tableRuntimesName = "OperationRuntimes";
-    private string tableMtmActionsName = "MtmActions";
+    private string tableTagsName = "PredictedTags"+ User;
+    private string tableRuntimesName = "Runtimes"+ User;
+    private string tableMtmHandActionsName = "MtmHandActions" + User;
 
     private string storageAccountKey = "IQQpV3U2AY6VJ21FhmkGAaGKyCQeuNN1sldwKAcwYGFbly+zbfgF3OMsBDg5RVKjnmYQoTtKvebe+AStAjdpfg==";
 
@@ -29,12 +31,13 @@ public class TableManager : MonoBehaviour
             {
                 await InsertMtmActionHandAsync(hand);
             }
+            //todo: add for steps and bend&arise
         }
     }
 
     private async Task InsertMtmActionHandAsync(MtmActionHand mtmActionHand)
     {
-        string tableUrl = $"https://{storageAccountName}.table.core.windows.net/{tableMtmActionsName}";
+        string tableUrl = $"https://{storageAccountName}.table.core.windows.net/{tableMtmHandActionsName}";
 
 
         var handColumn = mtmActionHand.Hand ?? "-";

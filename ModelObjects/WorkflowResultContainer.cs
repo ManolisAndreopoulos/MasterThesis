@@ -8,15 +8,15 @@ public class WorkflowResultContainer //todo: rename
     public string Message { get; set; }
     public bool TagsWereFound { get; private set; }
     public List<Tag> Tags { get; private set; }
-    [CanBeNull] public AdjustedImage Image { get; private set; }
+    [CanBeNull] public ImageContainer ImageContainer { get; private set; }
 
-    public WorkflowResultContainer(List<Tag> tags, RuntimeContainer runtimeContainer, bool tagsWereFound, AdjustedImage adjustedImage)
+    public WorkflowResultContainer(List<Tag> tags, RuntimeContainer runtimeContainer, bool tagsWereFound, ImageContainer imageContainer)
     {
         RuntimeContainer = runtimeContainer;
         Message = GetRuntimeProfilingMessage(runtimeContainer);
         TagsWereFound = tagsWereFound;
         Tags = tags;
-        Image = adjustedImage;
+        ImageContainer = imageContainer;
     }
 
     public WorkflowResultContainer(string message, bool tagsWereFound)
@@ -25,7 +25,7 @@ public class WorkflowResultContainer //todo: rename
         Message = message;
         TagsWereFound = tagsWereFound;
         Tags = new List<Tag>();
-        Image = null;
+        ImageContainer = null;
     }
 
     private string GetRuntimeProfilingMessage(RuntimeContainer runtimeContainer)

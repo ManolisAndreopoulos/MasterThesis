@@ -125,7 +125,7 @@ public class BendAndAriseDetector : MonoBehaviour
             {
                 StartedBend = false;
                 CompletedPreviousBend = true;
-                _bendAndAriseCount++;
+                _bendAndAriseCount++; //todo: transcribe to database
                 _headOrthogonalPositionAtStartOfBend = Vector3.zero;
             }
         }

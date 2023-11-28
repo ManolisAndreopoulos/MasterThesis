@@ -15,26 +15,35 @@ public class BlobManager : MonoBehaviour
 
     private string defaultContainerName = "ab-images";
     private string trainingImagesContainerName = "training-images";
+    private string imagesForPostProcessingContainerName = "userx-forpostprocessing";
 
     private string _message = string.Empty;
 
-    public async Task<string> StoreImage(AdjustedImage adjustedImage)
+    public async Task<string> StoreImage(ImageContainer imageContainer)
     {
-        _message = adjustedImage.ImageTitle + " : " + await PutBlobAsync(adjustedImage, defaultContainerName);
+        _message = imageContainer.ImageTitle + " : " + await PutBlobAsync(imageContainer, defaultContainerName);
         return _message;
     }
 
-    public async Task<string> StoreImageForTraining(AdjustedImage adjustedImage)
+    public async Task<string> StoreImagesForPostProcessing(ImageContainer abImageContainer, ImageContainer depthImageContainer)
     {
-        _message = adjustedImage.ImageTitle + " : " + await PutBlobAsync(adjustedImage, trainingImagesContainerName);
+        _message = abImageContainer.ImageTitle + " : " + await PutBlobAsync(abImageContainer, imagesForPostProcessingContainerName) + "\n";
+        _message += depthImageContainer.ImageTitle + " : " + await PutBlobAsync(depthImageContainer, imagesForPostProcessingContainerName) + "\n";
+
         return _message;
     }
 
-    private async Task<string> PutBlobAsync(AdjustedImage adjustedImage, string containerName)
+    public async Task<string> StoreImageForTraining(ImageContainer imageContainer)
     {
-        var imageInBytes = adjustedImage.InBytes;
+        _message = imageContainer.ImageTitle + " : " + await PutBlobAsync(imageContainer, trainingImagesContainerName);
+        return _message;
+    }
 
-        var blobName = adjustedImage.ImageTitle;
+    private async Task<string> PutBlobAsync(ImageContainer imageContainer, string containerName)
+    {
+        var imageInBytes = imageContainer.InBytes;
+
+        var blobName = imageContainer.ImageTitle;
         var blobUrl = $"https://{StorageAccountName}.blob.core.windows.net/{containerName}/{blobName}";
 
 
@@ -42,7 +51,7 @@ public class BlobManager : MonoBehaviour
         using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Put, blobUrl);
 
         // Request headers
-        httpRequestMessage.Headers.Add("x-ms-date", adjustedImage.TimeImageWasCaptured.ToString("R", CultureInfo.InvariantCulture));
+        httpRequestMessage.Headers.Add("x-ms-date", imageContainer.TimeImageWasCaptured.ToString("R", CultureInfo.InvariantCulture));
         httpRequestMessage.Headers.Add("x-ms-version", "2017-04-17");
         httpRequestMessage.Headers.Add("x-ms-blob-type", "BlockBlob");
 

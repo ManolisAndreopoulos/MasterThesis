@@ -5,12 +5,12 @@ using Microsoft.MixedReality.Toolkit.Utilities;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class AdjustedImageProviderOnline : MonoBehaviour
+public class AbImageSamplerOnline : MonoBehaviour
 {
     [SerializeField] private DepthStreamProvider DepthStreamProvider = null;
     [SerializeField] private RawImage AbRawImage;
 
-    public List<AdjustedImage> NewAdjustedAbImageBatch { get; private set; } = new List<AdjustedImage>();
+    public List<ImageContainer> NewAdjustedAbImageBatch { get; private set; } = new List<ImageContainer>();
     public bool DetectWorkflowIsTriggered { get; set; } = false;
 
     public bool EnoughImagesAreCaptured => _adjustedAbImageBuffer.Count >= BatchSize;
@@ -21,7 +21,7 @@ public class AdjustedImageProviderOnline : MonoBehaviour
     private const int MaxElementsInBuffer = 40;
 
     private ImageUtilities _imageUtilities = new ImageUtilities();
-    private static Queue<AdjustedImage> _adjustedAbImageBuffer = new Queue<AdjustedImage>();
+    private static Queue<ImageContainer> _adjustedAbImageBuffer = new Queue<ImageContainer>();
     private float _timeLastUpdatedProcessedImages;
     private readonly object _lock = new object();
 
@@ -84,7 +84,7 @@ public class AdjustedImageProviderOnline : MonoBehaviour
     }
 
 
-    public AdjustedImage GetCurrentAdjustedABImage()
+    public ImageContainer GetCurrentAdjustedABImage()
     {
         return _imageUtilities.AdjustBrightnessContrastAndRotate(AbRawImage.texture as Texture2D, DepthStreamProvider.DepthFrameData);
     }
@@ -100,7 +100,7 @@ public class AdjustedImageProviderOnline : MonoBehaviour
         lock (_lock)
         {
 
-            NewAdjustedAbImageBatch = new List<AdjustedImage>();
+            NewAdjustedAbImageBatch = new List<ImageContainer>();
 
             for (var i = 0; i < BatchSize; i++)
             {

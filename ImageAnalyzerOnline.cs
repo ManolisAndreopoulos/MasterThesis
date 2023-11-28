@@ -17,7 +17,7 @@ public class ImageAnalyzerOnline : MonoBehaviour
     public TextMeshPro OutputText;
     public GetPutDetector MtmTranscriber = null;
 
-    [SerializeField] private AdjustedImageProviderOnline _adjustedImageProvider;
+    [SerializeField] private AbImageSamplerOnline _abImageSamplerOnline;
     [SerializeField] private float MinimumConfidenceForObjectDetection;
 
     [Header("Computer Vision Resource")]
@@ -82,7 +82,7 @@ public class ImageAnalyzerOnline : MonoBehaviour
     {
         try
         {
-            _adjustedImageProvider.DetectWorkflowIsTriggered = true;
+            _abImageSamplerOnline.DetectWorkflowIsTriggered = true;
             var dataContainer = await Task.Run(DetectInternal);
 
             OutputText.text = dataContainer.OperationMessage;
@@ -98,24 +98,24 @@ public class ImageAnalyzerOnline : MonoBehaviour
 
             foreach (var result in dataContainer.Results)
             {
-                //var depthImage = new AdjustedImage(
-                //    imageUtilities.ConvertToPNG(adjustedImage.DepthMap),
-                //    "Depth" + adjustedImage.ImageTitle,
-                //    adjustedImage.TimeImageWasCaptured
+                //var depthImageContainer = new ImageContainer(
+                //    imageUtilities.ConvertDepthMapToPNG(imageContainer.DepthMap),
+                //    "Depth" + imageContainer.ImageTitle,
+                //    imageContainer.TimeImageWasCaptured
                 //);
                 var filteredTags = result.Tags;
 
-                if (result.Image == null) continue;
+                if (result.ImageContainer == null) continue;
 
-                var adjustedImage = result.Image;
-                var imageWithBoundingBoxes = new AdjustedImage(
+                var adjustedImage = result.ImageContainer;
+                var imageWithBoundingBoxes = new ImageContainer(
                     imageUtilities.AugmentImageWithBoundingBoxesAndDepth(filteredTags, adjustedImage),
                     adjustedImage.ImageTitle,
                     adjustedImage.TimeImageWasCaptured);
 
-                //BlobManager.StoreImage(adjustedImage);
+                //BlobManager.StoreImage(imageContainer);
                 BlobManager.StoreImage(imageWithBoundingBoxes);
-                //BlobManager.StoreImage(depthImage);
+                //BlobManager.StoreImage(depthImageContainer);
             }
 
             //MTM Get/Put transcription on main thread
@@ -144,7 +144,7 @@ public class ImageAnalyzerOnline : MonoBehaviour
         TemporaryDataContainer dataContainer;
         List<WorkflowResultContainer> results = new List<WorkflowResultContainer>();
 
-        if (!_adjustedImageProvider.EnoughImagesAreCaptured)
+        if (!_abImageSamplerOnline.EnoughImagesAreCaptured)
         {
             dataContainer = new TemporaryDataContainer()
             {
@@ -155,10 +155,10 @@ public class ImageAnalyzerOnline : MonoBehaviour
             return dataContainer;
         }
 
-        _adjustedImageProvider.PopulateBatchWithNewImages();
+        _abImageSamplerOnline.PopulateBatchWithNewImages();
 
         // Create an array to store the results
-        var elementCount = _adjustedImageProvider.NewAdjustedAbImageBatch.Count;
+        var elementCount = _abImageSamplerOnline.NewAdjustedAbImageBatch.Count;
         var taskResults = new Task<WorkflowResultContainer>[elementCount];
 
         //Profiling total multi-threaded operation
@@ -168,7 +168,7 @@ public class ImageAnalyzerOnline : MonoBehaviour
         {
             for (var i = 0; i < elementCount; i++)
             {
-                var adjustedImage = _adjustedImageProvider.NewAdjustedAbImageBatch[i];
+                var adjustedImage = _abImageSamplerOnline.NewAdjustedAbImageBatch[i];
                 taskResults[i] = RunWorkflowAsync(adjustedImage);
                 //await Task.Delay(100);
             }
@@ -231,12 +231,12 @@ public class ImageAnalyzerOnline : MonoBehaviour
         return message;
     }
 
-    private async Task<WorkflowResultContainer> RunWorkflowAsync(AdjustedImage adjustedImage)
+    private async Task<WorkflowResultContainer> RunWorkflowAsync(ImageContainer imageContainer)
     {
         var totalOperationStopwatch = Stopwatch.StartNew(); // Profiling
         var customVisionStopwatch = Stopwatch.StartNew(); // Profiling
 
-        var customVisionResult = await DetectWithCustomVision(adjustedImage.InBytes);
+        var customVisionResult = await DetectWithCustomVision(imageContainer.InBytes);
 
         customVisionStopwatch.Stop();
         var customVisionDuration = Math.Round(customVisionStopwatch.ElapsedMilliseconds / 1000.0, 2); // Profiling
@@ -260,8 +260,8 @@ public class ImageAnalyzerOnline : MonoBehaviour
             return new WorkflowResultContainer(message, false);
         }
 
-        tagManager.AugmentTagsWithImageTitle(filteredTags, adjustedImage.ImageTitle);
-        tagManager.AugmentTagsWithForegroundIndices(filteredTags, adjustedImage.Pixels, adjustedImage.DepthMap);
+        tagManager.AugmentTagsWithImageTitle(filteredTags, imageContainer.ImageTitle);
+        tagManager.AugmentTagsWithForegroundIndices(filteredTags, imageContainer.Pixels, imageContainer.DepthMap);
 
         depthUtilities.AugmentTagsWithFilteredDepth(filteredTags);
 
@@ -274,9 +274,9 @@ public class ImageAnalyzerOnline : MonoBehaviour
 
         var runtimes = new RuntimeContainer(customVisionDuration, totalOperationDuration); //blob and table storing durations are zero because they are async and we don't await for their execution
 
-        var workflowResultContainer = new WorkflowResultContainer(filteredTags, runtimes, true, adjustedImage);
+        var workflowResultContainer = new WorkflowResultContainer(filteredTags, runtimes, true, imageContainer);
 
-        TableManager.StoreRuntimes(workflowResultContainer, adjustedImage.ImageTitle);
+        TableManager.StoreRuntimes(workflowResultContainer, imageContainer.ImageTitle);
 
         return workflowResultContainer;
     }
@@ -304,7 +304,7 @@ public class ImageAnalyzerOnline : MonoBehaviour
 
     public async void StoreImage()
     {
-        var image = _adjustedImageProvider.GetCurrentAdjustedABImage();
+        var image = _abImageSamplerOnline.GetCurrentAdjustedABImage();
         var operationMessage = await BlobManager.StoreImageForTraining(image);
         OutputText.text = operationMessage;
     }
@@ -342,7 +342,7 @@ public class ImageAnalyzerOnline : MonoBehaviour
 
     public async void Analyze()
     {
-        var prediction = await AnalyzeWithComputerVision(_adjustedImageProvider.NewAdjustedAbImageBatch.First().InBytes);
+        var prediction = await AnalyzeWithComputerVision(_abImageSamplerOnline.NewAdjustedAbImageBatch.First().InBytes);
         OutputText.text = prediction.Result;
 
         var caption = prediction.Result;
@@ -350,15 +350,15 @@ public class ImageAnalyzerOnline : MonoBehaviour
         //Iterate through the list of buzzwords
         if (_wordsIndicateGrasping.Any(word => caption.Contains(word)))
         {
-            BlobManager.StoreImage(_adjustedImageProvider.NewAdjustedAbImageBatch.First());
+            BlobManager.StoreImage(_abImageSamplerOnline.NewAdjustedAbImageBatch.First());
         }
     }
 
     private async Task<GeneralPrediction> AnalyzeWithComputerVision(byte[] image)
     {
-        if (_adjustedImageProvider == null)
+        if (_abImageSamplerOnline == null)
         {
-            var message = $"Error: Assign variable {_adjustedImageProvider.name} in Unity.";
+            var message = $"Error: Assign variable {_abImageSamplerOnline.name} in Unity.";
             var faultyPrediction = new GeneralPrediction() { Result = message };
 
             return faultyPrediction;

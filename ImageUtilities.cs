@@ -11,16 +11,16 @@ public class ImageUtilities
     private const int Height = 512;
     private const int Width = 512;
 
-    public byte[] ConvertToPNG(ushort[] originalStream)
+    public byte[] ConvertDepthMapToPNG(ushort[] depthMap)
     {
-        var valuesCount = originalStream.Length;
-        var maxvalue = originalStream.Max();
+        var valuesCount = depthMap.Length;
+        var maxvalue = depthMap.Max();
 
         var pixels = new Color[valuesCount];
 
         for (var i = 0; i < valuesCount; i++)
         {
-            var normalizedValue = originalStream[i] / (float) maxvalue;
+            var normalizedValue = depthMap[i] / (float) maxvalue;
 
             pixels[i] = new Color(normalizedValue, normalizedValue, normalizedValue, 1);
         }
@@ -35,7 +35,7 @@ public class ImageUtilities
         return image;
     }
 
-    public AdjustedImage AdjustBrightnessContrastAndRotate(Texture2D alphaTexture, ushort[] depthFrameData)
+    public ImageContainer AdjustBrightnessContrastAndRotate(Texture2D alphaTexture, ushort[] depthFrameData)
     {
         var originalPixels = alphaTexture.GetPixels();
         var modifiedPixels = new Color[originalPixels.Length];
@@ -70,16 +70,16 @@ public class ImageUtilities
 
         var image = adjustedImageTexture.EncodeToPNG();
 
-        return new AdjustedImage(image, adjustedImageTexture, depthFrameData, adjustedImageTexture.GetPixels());
+        return new ImageContainer(image, adjustedImageTexture, depthFrameData, adjustedImageTexture.GetPixels());
     }
 
-    public byte[] AugmentImageWithBoundingBoxesAndDepth(List<Tag> tags, AdjustedImage adjustedImage) //todo: run this on the main thread
+    public byte[] AugmentImageWithBoundingBoxesAndDepth(List<Tag> tags, ImageContainer imageContainer) //todo: run this on the main thread
     {
-        var augmentedPixels = adjustedImage.Pixels;
+        var augmentedPixels = imageContainer.Pixels;
         var boundaryThicknessInPixels = 2;
 
-        var height = adjustedImage.Texture.height;
-        var width = adjustedImage.Texture.width;
+        var height = imageContainer.Texture.height;
+        var width = imageContainer.Texture.width;
 
 
         foreach (var tag in tags)

@@ -3,7 +3,7 @@ using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class AdjustedImage
+public class ImageContainer
 {
     public byte[] InBytes { get; }
     public Color[] Pixels { get; }
@@ -12,7 +12,7 @@ public class AdjustedImage
     public DateTime TimeImageWasCaptured { get; }
     public string ImageTitle { get; set; }
 
-    public AdjustedImage(byte[] inBytes, Texture2D texture, ushort[] depthMap, Color[] pixels)
+    public ImageContainer(byte[] inBytes, Texture2D texture, ushort[] depthMap, Color[] pixels)
     {
         InBytes = inBytes;
         Texture = texture;
@@ -22,7 +22,7 @@ public class AdjustedImage
         Pixels = pixels;
     }
 
-    public AdjustedImage(byte[] inBytes, string imageTitle, DateTime dateTime)
+    public ImageContainer(byte[] inBytes, string imageTitle, DateTime dateTime)
     {
         InBytes = inBytes;
         DepthMap = null;
