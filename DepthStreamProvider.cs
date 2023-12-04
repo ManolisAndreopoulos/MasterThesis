@@ -28,6 +28,7 @@ public class DepthStreamProvider : MonoBehaviour, ISensorStreamProvider
     // depth map parameter
     private ushort[] depthFrameData = null;
     [CanBeNull] public ushort[] DepthFrameData => RotateAndFlipDepthStream(depthFrameData);
+    [CanBeNull] public ushort[] DepthFrameDataOriginal => depthFrameData;
     public int Height { get; private set; }
     public int Width { get; private set; }
 

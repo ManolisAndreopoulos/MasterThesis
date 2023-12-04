@@ -14,8 +14,9 @@ public class BlobManager : MonoBehaviour
     private const string StorageAccountKey = "IQQpV3U2AY6VJ21FhmkGAaGKyCQeuNN1sldwKAcwYGFbly+zbfgF3OMsBDg5RVKjnmYQoTtKvebe+AStAjdpfg==";
 
     private string defaultContainerName = "ab-images";
-    private string trainingImagesContainerName = "training-images";
-    private string imagesForPostProcessingContainerName = "userx-forpostprocessing";
+    private string trainingImagesContainerName = "training-images2";
+    private string imagesForPostProcessingContainerName = "testing"; // "userx-forpostprocessing";
+    private string depthImagesForPostProcessingContainerName = "testing-depth"; // "userx-forpostprocessing";
 
     private string _message = string.Empty;
 
@@ -28,7 +29,7 @@ public class BlobManager : MonoBehaviour
     public async Task<string> StoreImagesForPostProcessing(ImageContainer abImageContainer, ImageContainer depthImageContainer)
     {
         _message = abImageContainer.ImageTitle + " : " + await PutBlobAsync(abImageContainer, imagesForPostProcessingContainerName) + "\n";
-        _message += depthImageContainer.ImageTitle + " : " + await PutBlobAsync(depthImageContainer, imagesForPostProcessingContainerName) + "\n";
+        _message += depthImageContainer.ImageTitle + " : " + await PutBlobAsync(depthImageContainer, depthImagesForPostProcessingContainerName) + "\n";
 
         return _message;
     }

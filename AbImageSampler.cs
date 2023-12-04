@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.MixedReality.Toolkit.Utilities;
 using TMPro;
@@ -10,15 +11,19 @@ using UnityEngine.UI;
 public class AbImageSampler : MonoBehaviour
 {
     [SerializeField] private DepthStreamProvider DepthStreamProvider = null;
+    [SerializeField] private ActiveBrightnessStreamProvider ActiveBrightnessStreamProvider = null;
     [SerializeField] private RawImage AbRawImage;
     public TextMeshPro DebuggingText = null;
 
     [Header("Blob Manager")]
     [SerializeField] private BlobManager BlobManager;
 
+    [Header("TCP Client")]
+    [SerializeField] private TCPClient TcpClient;
+
     private bool _startSampling;
     private float _timeLastSampledAnImage;
-    private const float TimerForCapturingNewImageInSeconds = 0.5f;
+    private const float TimerForCapturingNewImageInSeconds = 0.25f;
     private readonly ImageUtilities _imageUtilities = new ImageUtilities();
 
     private int _counter = 0;
@@ -36,27 +41,77 @@ public class AbImageSampler : MonoBehaviour
 
         if (TimerRinging(TimerForCapturingNewImageInSeconds))
         {
-            var time = DateTime.Now;
+            //For Database Storing
+            //----------------------------------
+            //var time = DateTime.Now;
 
-            var abImage = (AbRawImage.texture as Texture2D).EncodeToPNG();
-            var abImageContainer = new ImageContainer(
-                abImage,
-                $"Image{_counter}.png",
-                time
-            );
+            //var abImage = (AbRawImage.texture as Texture2D).EncodeToPNG();
+            //var abImageContainer = new ImageContainer(
+            //    abImage,
+            //    $"Image{_counter}.png",
+            //    time
+            //);
 
 
-            var depthImage = DepthStreamProvider.DepthFrameData != null ? _imageUtilities.ConvertDepthMapToPNG(DepthStreamProvider.DepthFrameData) : new byte[20];
-            var depthImageContainer = new ImageContainer(
-                depthImage,
-                $"Depth{_counter}.png",
-                time
-            );
+            //var depthImage = DepthStreamProvider.DepthFrameData != null ? _imageUtilities.ConvertDepthMapToPNG(DepthStreamProvider.DepthFrameData) : new byte[20];
+            //var depthImageContainer = new ImageContainer(
+            //    depthImage,
+            //    $"Depth{_counter}.png",
+            //    time
+            //);
 
-            StoreImagesAsync(abImageContainer, depthImageContainer);
+            //StoreImagePngTcpAsync(abImage, depthImage);
 
-            _counter++;
+            //StoreImagesAsync(abImageContainer, depthImageContainer);
+
+            //_counter++;
+            //----------------------------------
+
+            var abImageBuffer = ActiveBrightnessStreamProvider.ShortAbImageBuffer;
+            var depthMapBuffer = DepthStreamProvider.DepthFrameDataOriginal;
+
+            StoreViaTcp(abImageBuffer, depthMapBuffer);
         }
+    }
+
+    private async Task StoreViaTcp(ushort[] abImageBuffer, ushort[] depthMapBuffer)
+    {
+        await StoreAbImageBufferTcpAsync(abImageBuffer);
+        await Task.Delay(50);
+        await StoreDepthMapBufferTcpAsync(depthMapBuffer);
+        await Task.Delay(50);
+    }
+
+    private async Task StoreAbImageBufferTcpAsync(ushort[] abImage)
+    {
+#if WINDOWS_UWP
+            if(!TcpClient.Connected) return;
+            TcpClient.SendAbImageBufferAsync(abImage);
+#endif
+    }
+
+    private async Task StoreDepthMapBufferTcpAsync(ushort[] depthMap)
+    {
+#if WINDOWS_UWP
+            if(!TcpClient.Connected) return;
+            TcpClient.SendDepthMapBufferAsync(depthMap);
+#endif
+    }
+
+    private async void StoreImageRawTcpAsync(ushort[] abImage, ushort[] depthImage)
+    {
+#if WINDOWS_UWP
+            if(!TcpClient.Connected) return;
+            TcpClient.SendUINT16Async(abImage, depthImage);
+#endif
+    }
+
+    private async void StoreImagePngTcpAsync(byte[] abImage, byte[] depthImage)
+    {
+#if WINDOWS_UWP
+            if(!TcpClient.Connected) return;
+            TcpClient.SendImageAsync(abImage, depthImage);
+#endif
     }
 
     public void StartSamplingAbImages()

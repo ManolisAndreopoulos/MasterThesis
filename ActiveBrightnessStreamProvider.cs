@@ -28,7 +28,8 @@ public class ActiveBrightnessStreamProvider : MonoBehaviour, ISensorStreamProvid
     private byte[] shortAbImageFrameData = null;
 
     //[SerializeField] public CameraUtilities camera = null;
-    
+
+    public ushort[] ShortAbImageBuffer;
 
     #region ISensorStreamProvider
 
@@ -92,6 +93,7 @@ public class ActiveBrightnessStreamProvider : MonoBehaviour, ISensorStreamProvid
         if (startRealtimePreview && shortAbImagePreviewPlane != null && researchMode.ShortAbImageTextureUpdated())
         {
             byte[] frameTexture = researchMode.GetShortAbImageTextureBuffer();
+            ShortAbImageBuffer = researchMode.GetShortAbImageBuffer();
             if (frameTexture.Length > 0)
             {
                 if (shortAbImageFrameData == null)
@@ -104,9 +106,7 @@ public class ActiveBrightnessStreamProvider : MonoBehaviour, ISensorStreamProvid
                 }
 
                 (AbImage.texture as Texture2D).LoadRawTextureData(shortAbImageFrameData);
-                //AbImageTexture.LoadRawTextureData(shortAbImageFrameData);
                 (AbImage.texture as Texture2D).Apply();
-                //AbImageTexture.Apply();
             }
         }
 
