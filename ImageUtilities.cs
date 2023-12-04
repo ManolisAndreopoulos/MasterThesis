@@ -11,6 +11,20 @@ public class ImageUtilities
     private const int Height = 512;
     private const int Width = 512;
 
+    public ushort[] ConvertAbImageTextureToUINT16(Texture2D alphaTexture)
+    {
+        var originalPixels = alphaTexture.GetPixels();
+
+        var temporaryList = new List<ushort>();
+
+        foreach (var pixel in originalPixels)
+        {
+            var intensityInBytes = (ushort) (pixel.a * 255);
+            temporaryList.Add(intensityInBytes);
+        }
+        return temporaryList.ToArray();
+    }
+
     public byte[] ConvertDepthMapToPNG(ushort[] depthMap)
     {
         var valuesCount = depthMap.Length;

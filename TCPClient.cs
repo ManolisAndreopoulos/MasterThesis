@@ -131,57 +131,26 @@ public class TCPClient : MonoBehaviour
         lastMessageSent = true;
     }
 
-    //Not Working
-    public async void SendImageAsync(byte[] abImage, byte[] depthImage)
-    {
-        if (!lastMessageSent) return;
-        lastMessageSent = false;
-        try
-        {
-            // Write header
-            dw.WriteString("d"); // header "d" for depth camera
-
-            // Write image
-            dw.WriteInt32(abImage.Length + depthImage.Length);
-            dw.WriteBytes(abImage);
-            dw.WriteBytes(depthImage);
-
-            // Send out
-            await dw.StoreAsync();
-            await dw.FlushAsync();
-        }
-        catch (Exception ex)
-        {
-            SocketErrorStatus webErrorStatus = SocketError.GetStatus(ex.GetBaseException().HResult);
-            DebuggingText.text += webErrorStatus.ToString() != "Unknown" ? webErrorStatus.ToString() : ex.Message;
-            DebuggingText.text += "\n";
-        }
-        lastMessageSent = true;
-    }
-
     public async Task<bool> SendUINT16Async(ushort[] data1, ushort[] data2)
     {
         if (!lastMessageSent) return false;
         lastMessageSent = false;
         try
         {
-            using(var dw = new DataWriter(socket.OutputStream))
-            {
-                // Write header
-                dw.WriteString("s"); // header "s" stands for it is ushort array (uint16)
+            // Write header
+            dw.WriteString("s"); // header "s" stands for it is ushort array (uint16)
 
-                // Write Length
-                dw.WriteInt32(data1.Length + data2.Length);
+            // Write Length
+            dw.WriteInt32(data1.Length + data2.Length);
 
-                // Write actual data
-                dw.WriteBytes(UINT16ToBytes(data1));
-                dw.WriteBytes(UINT16ToBytes(data2));
+            // Write actual data
+            dw.WriteBytes(UINT16ToBytes(data1));
+            dw.WriteBytes(UINT16ToBytes(data2));
 
-                // Send out
-                await dw.StoreAsync();
-                await dw.FlushAsync();
-                dw.DetachStream();
-            } 
+            // Send out
+            await dw.StoreAsync();
+            await dw.FlushAsync();
+            dw.DetachStream();
         }
         catch (Exception ex)
         {

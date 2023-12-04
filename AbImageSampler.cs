@@ -41,37 +41,43 @@ public class AbImageSampler : MonoBehaviour
 
         if (TimerRinging(TimerForCapturingNewImageInSeconds))
         {
-            //For Database Storing
-            //----------------------------------
-            //var time = DateTime.Now;
-
-            //var abImage = (AbRawImage.texture as Texture2D).EncodeToPNG();
-            //var abImageContainer = new ImageContainer(
-            //    abImage,
-            //    $"Image{_counter}.png",
-            //    time
-            //);
-
-
-            //var depthImage = DepthStreamProvider.DepthFrameData != null ? _imageUtilities.ConvertDepthMapToPNG(DepthStreamProvider.DepthFrameData) : new byte[20];
-            //var depthImageContainer = new ImageContainer(
-            //    depthImage,
-            //    $"Depth{_counter}.png",
-            //    time
-            //);
-
-            //StoreImagePngTcpAsync(abImage, depthImage);
-
-            //StoreImagesAsync(abImageContainer, depthImageContainer);
-
-            //_counter++;
-            //----------------------------------
-
-            var abImageBuffer = ActiveBrightnessStreamProvider.ShortAbImageBuffer;
-            var depthMapBuffer = DepthStreamProvider.DepthFrameDataOriginal;
-
-            StoreViaTcp(abImageBuffer, depthMapBuffer);
+            //SendImagesToDatabase();
+            StoreImagesViaTcpConnection();
         }
+    }
+
+    private void StoreImagesViaTcpConnection()
+    {
+        var abImageBuffer = _imageUtilities.ConvertAbImageTextureToUINT16(AbRawImage.texture as Texture2D);
+        var depthMapBuffer = DepthStreamProvider.DepthFrameDataOriginal;
+
+        StoreViaTcp(abImageBuffer, depthMapBuffer);
+    }
+
+    private void SendImagesToDatabase()
+    {
+        var time = DateTime.Now;
+
+        var abImage = (AbRawImage.texture as Texture2D).EncodeToPNG();
+        var abImageContainer = new ImageContainer(
+            abImage,
+            $"Image{_counter}.png",
+            time
+        );
+
+
+        var depthImage = DepthStreamProvider.DepthFrameData != null
+            ? _imageUtilities.ConvertDepthMapToPNG(DepthStreamProvider.DepthFrameData)
+            : new byte[20];
+        var depthImageContainer = new ImageContainer(
+            depthImage,
+            $"Depth{_counter}.png",
+            time
+        );
+
+        StoreImagesAsync(abImageContainer, depthImageContainer);
+
+        _counter++;
     }
 
     private async Task StoreViaTcp(ushort[] abImageBuffer, ushort[] depthMapBuffer)
@@ -95,22 +101,6 @@ public class AbImageSampler : MonoBehaviour
 #if WINDOWS_UWP
             if(!TcpClient.Connected) return;
             TcpClient.SendDepthMapBufferAsync(depthMap);
-#endif
-    }
-
-    private async void StoreImageRawTcpAsync(ushort[] abImage, ushort[] depthImage)
-    {
-#if WINDOWS_UWP
-            if(!TcpClient.Connected) return;
-            TcpClient.SendUINT16Async(abImage, depthImage);
-#endif
-    }
-
-    private async void StoreImagePngTcpAsync(byte[] abImage, byte[] depthImage)
-    {
-#if WINDOWS_UWP
-            if(!TcpClient.Connected) return;
-            TcpClient.SendImageAsync(abImage, depthImage);
 #endif
     }
 
