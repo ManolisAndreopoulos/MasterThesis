@@ -38,10 +38,10 @@ public class GetPutDetector : MonoBehaviour
         DebuggingTextActions.text = _debuggingTextActions;
     }
 
-    public List<MtmAction> GetMTMActionsFromTags(List<WorkflowResultContainer> results)
+    public List<MtmActionHand> GetMTMActionsFromTags(List<WorkflowResultContainer> results)
     {
         var debuggingTextInternal = string.Empty;
-        List<MtmAction> MTMActionsToTranscribe = new List<MtmAction>();
+        List<MtmActionHand> MTMActionsToTranscribe = new List<MtmActionHand>();
 
         // Aggregate all tags in the batch in a single list
         List<Tag> tags = new List<Tag>();
@@ -70,7 +70,7 @@ public class GetPutDetector : MonoBehaviour
                                         $"Right Gets: {_getCountRight}\n" +
                                         $"Right Puts: {_putCountRight}";
             }
-            return new List<MtmAction>();
+            return new List<MtmActionHand>();
         } //todo: move up
 
         // Getting the overall counts across all tags from the images in the batch
@@ -122,7 +122,7 @@ public class GetPutDetector : MonoBehaviour
     }
 
     [CanBeNull]
-    private MtmAction GetActionForHand(List<Tag> tagsForHand, Hand hand, string debuggingTextInternal) //todo: delete the string debugging parameter 
+    private MtmActionHand GetActionForHand(List<Tag> tagsForHand, Hand hand, string debuggingTextInternal) //todo: delete the string debugging parameter 
     {
         var getTags = tagsForHand.Where(t => SearchTagForWord(t, "get")).ToList();
         var emptyTags = tagsForHand.Where(t => SearchTagForWord(t, "empty")).ToList();

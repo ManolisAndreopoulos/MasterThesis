@@ -1,18 +1,14 @@
 using System.Threading.Tasks;
 using UnityEngine;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using TMPro;
 using System.Linq;
-using System.Threading;
 using JetBrains.Annotations;
 using System.Diagnostics;
-using Object = System.Object;
 
-public class ImageAnalyzerOnline : MonoBehaviour
+public class CustomVisionOnline : MonoBehaviour
 {
     public TextMeshPro OutputText;
     public GetPutDetector MtmTranscriber = null;
@@ -124,7 +120,7 @@ public class ImageAnalyzerOnline : MonoBehaviour
                 var mtmActions = MtmTranscriber.GetMTMActionsFromTags(dataContainer.Results);
                 if (mtmActions.Count > 0)
                 {
-                    TableManager.StoreMtmActions(mtmActions);
+                    TableManager.StoreMtmHandActions(mtmActions);
                 }
             }
         }

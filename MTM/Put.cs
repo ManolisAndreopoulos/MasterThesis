@@ -1,6 +1,3 @@
-using UnityEngine.XR;
-using Vector3 = UnityEngine.Vector3;
-
 public class Put : MtmActionHand
 {
     public Put(DistanceClass distanceClass, string imageTitle, string hand)

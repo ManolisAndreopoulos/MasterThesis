@@ -17,39 +17,54 @@ public class BendAndAriseDetector : MonoBehaviour
      *  z -> Rotation (neck) to left direction
      */
 
-    public TextMeshPro DebuggingText = null; //assigned in Unity
+    public TextMeshPro BendAndAriseDetectorOutputText = null; //assigned in Unity
     public Camera HololensCamera = null; //assigned in Unity
-  
-    public bool StartedBend { get; private set; }
-    public bool CompletedPreviousBend { get; private set; } = true;
+    [Header("Table Manager")]
+    public TableManager TableManager = null;
 
+    //Algorithm Thresholds
     private double StartVerticalVelocityThreshold = 0.35;
     private double VerticalDisplacementThresholdInMeters = 0.2; //todo: change this based on experiments
 
+    //Algorithm States
     private Vector3 _headPosition = Vector3.zero;
     private Vector3 _headOrthogonalPosition = Vector3.zero;
     private Vector3 _headEulerAngles = Vector3.zero;
     private Vector3 _headLinearVelocity = Vector3.zero;
-
     private Vector3 _headOrthogonalPositionAtStartOfBend = Vector3.zero;
+    private bool _startedBend;
+    private bool _completedPreviousBend = true;
 
-    // Action count
-    private int _bendAndAriseCount = 0;
+    //Counter
+    private int _bendAndAriseCount;
+
+    //Bend and Arise Cycle stopwatch
+    private Stopwatch _stopwatch;
+    private const int BendTimeThresholdInMilliseconds = 2000; // Max Bend duration before discarding
 
     private readonly CameraToOrthogonalPosition _converter = new CameraToOrthogonalPosition();
 
-    private float _verticalTravelDistanceForDebugging;
+    private bool _toDetect = false;
 
-    // Max Bend duration before discarding
-    private Stopwatch _stopwatch;
-    private const int BendTimeThresholdInMilliseconds = 2000;
+    public void Run()
+    {
+        _toDetect = true;
+    }
+
+    public void Stop()
+    {
+        _toDetect = false;
+        TableManager.StoreMtmAction(new BendAndAriseAction(_bendAndAriseCount));
+        BendAndAriseDetectorOutputText.text = $"Total: {_bendAndAriseCount}";
+    }
+
+    #region Voice Commands for Tuning Of Algorithm Parameters
 
     public void ResetBendAndAriseDetection()
     {
         _bendAndAriseCount = 0;
-        StartedBend = false;
-        CompletedPreviousBend = true;
-        _verticalTravelDistanceForDebugging = 0;
+        _startedBend = false;
+        _completedPreviousBend = true;
     }
 
     public void IncreaseStartVelocity()
@@ -72,6 +87,26 @@ public class BendAndAriseDetector : MonoBehaviour
         VerticalDisplacementThresholdInMeters -= 0.1;
     }
 
+    #endregion
+
+    #region Debugging Message Generation
+
+    private string GetDebuggingText()
+    {
+        return $"Bends: {_bendAndAriseCount}\n\n" +
+               $"Vert Vel Thres:{StartVerticalVelocityThreshold}\n" +
+               $"Vert Displ Thre:{VerticalDisplacementThresholdInMeters}\n\n" +
+               $"Velocity:\n" +
+               $"x:{_headLinearVelocity.x:F3}, y:{_headLinearVelocity.y:F3}, z:{_headLinearVelocity.z:F3}\n";
+    }
+
+    private string GetStatesOfFlowchart()
+    {
+        return $"StartedBend: {_startedBend}\n CompletedPrevBend: {_completedPreviousBend}\n";
+    }
+
+    #endregion
+
     void FixedUpdate()
     {
         UpdateLinearVelocityOfHead();
@@ -82,73 +117,55 @@ public class BendAndAriseDetector : MonoBehaviour
 
     void Update()
     {
-        CheckForAction();
-        DebuggingText.text = GetDebuggingText();
+        if (_toDetect)
+        {
+            BendAndAriseDetectorOutputText.text = $"Bends: {_bendAndAriseCount}";
+            CheckForAction();
+        }
     }
 
     private void CheckForAction()
     {
         // Start of Bend
-        if (!StartedBend && CompletedPreviousBend && _headLinearVelocity.y < -StartVerticalVelocityThreshold)
+        if (!_startedBend && _completedPreviousBend && _headLinearVelocity.y < -StartVerticalVelocityThreshold)
         {
-            StartedBend = true;
-            CompletedPreviousBend = true;
+            _startedBend = true;
+            _completedPreviousBend = true;
             _headOrthogonalPositionAtStartOfBend = _headOrthogonalPosition;
 
             ResetTimer();
         }
 
         //End of Bend
-        if (StartedBend)
+        if (_startedBend)
         {
             if (CheckTimerHasPassed())
             {
                 //Return back to "Start of Bend" detection
-                StartedBend = false;
-                CompletedPreviousBend = true;
+                _startedBend = false;
+                _completedPreviousBend = true;
             }
             var verticalTravelDistance = _headOrthogonalPosition.y - _headOrthogonalPositionAtStartOfBend.y;
-            _verticalTravelDistanceForDebugging = verticalTravelDistance; //todo: Delete
             if (verticalTravelDistance < -VerticalDisplacementThresholdInMeters) //Bend
             {
-                StartedBend = false; // so that the code does not enter this if statement again for this Bend&Arise Cycle
-                CompletedPreviousBend = false;
+                _startedBend = false; // so that the code does not enter this if statement again for this Bend&Arise Cycle
+                _completedPreviousBend = false;
             }
         }
 
         // End of Arise
-        if (!CompletedPreviousBend)
+        if (!_completedPreviousBend)
         {
             var verticalTravelDistance = _headOrthogonalPosition.y - _headOrthogonalPositionAtStartOfBend.y;
-            _verticalTravelDistanceForDebugging = verticalTravelDistance; //todo: Delete
             if (Math.Abs(verticalTravelDistance) < VerticalDisplacementThresholdInMeters) //Arise
             {
-                StartedBend = false;
-                CompletedPreviousBend = true;
-                _bendAndAriseCount++; //todo: transcribe to database
+                _startedBend = false;
+                _completedPreviousBend = true;
+                _bendAndAriseCount++;
                 _headOrthogonalPositionAtStartOfBend = Vector3.zero;
             }
         }
     }
-
-    #region Debugging Message Generation
-
-    private string GetDebuggingText()
-    {
-        return $"Bends: {_bendAndAriseCount}\n\n" +
-               $"Vert Vel Thres:{StartVerticalVelocityThreshold}\n" +
-               $"Vert Displ Thre:{VerticalDisplacementThresholdInMeters}\n\n" +
-               $"Velocity:\n" +
-               $"x:{_headLinearVelocity.x:F3}, y:{_headLinearVelocity.y:F3}, z:{_headLinearVelocity.z:F3}\n" +
-               $"VertTravel Dist:{_verticalTravelDistanceForDebugging}\n";
-    }
-
-    private string GetStatesOfFlowchart()
-    {
-        return $"StartedBend: {StartedBend}\n CompletedPrevBend: {CompletedPreviousBend}\n";
-    }
-
-    #endregion
 
     #region Stopwatch Methods
 

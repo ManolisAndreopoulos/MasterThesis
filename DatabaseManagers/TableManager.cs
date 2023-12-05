@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.MixedReality.Toolkit;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Net.Http;
@@ -12,47 +13,63 @@ using UnityEngine;
 
 public class TableManager : MonoBehaviour
 {
+    public TextMeshPro ErrorText = null;
+
     private const string User = "UserX";
 
-    private string storageAccountName = "msstorageresource";
-    private string tableTagsName = "PredictedTags"+ User;
-    private string tableRuntimesName = "Runtimes"+ User;
-    private string tableMtmHandActionsName = "MtmHandActions" + User;
+    private const string StorageAccountName = "msstorageresource";
+    private const string TableTagsName = "PredictedTags" + User;
+    private const string TableRuntimesName = "Runtimes"+ User;
+    private const string TableMtmHandActionsName = "MtmHandActions" + User;
+    private const string TableMtmBodyActionsName = "MtmBodyActionsAllUsers";
 
     private string storageAccountKey = "IQQpV3U2AY6VJ21FhmkGAaGKyCQeuNN1sldwKAcwYGFbly+zbfgF3OMsBDg5RVKjnmYQoTtKvebe+AStAjdpfg==";
 
     private string _message = string.Empty;
 
-    public async void StoreMtmActions(List<MtmAction> mtmActions)
+    void Update()
+    {
+        ErrorText.text = _message;
+    }
+
+    public async void StoreMtmHandActions(List<MtmActionHand> mtmActions)
     {
         foreach (var mtmAction in mtmActions)
         {
-            if (mtmAction is MtmActionHand hand)
-            {
-                await InsertMtmActionHandAsync(hand);
-            }
-            //todo: add for steps and bend&arise
+            await InsertMtmActionHandAsync(mtmAction);
         }
     }
 
-    private async Task InsertMtmActionHandAsync(MtmActionHand mtmActionHand)
+    public async void StoreMtmAction(MtmAction mtmAction)
     {
-        string tableUrl = $"https://{storageAccountName}.table.core.windows.net/{tableMtmHandActionsName}";
+        if (mtmAction is MtmActionHand hand)
+        {
+            await InsertMtmActionHandAsync(hand);
+        }
+        else if (mtmAction is StepAction step)
+        {
+            await InsertStep(step);
+        }
+        else if (mtmAction is BendAndAriseAction bend)
+        {
+            await InsertBendAndArise(bend);
+        }
+    }
 
+    private async Task InsertStep(StepAction action)
+    {
+        var tableUrl = $"https://{StorageAccountName}.table.core.windows.net/{TableMtmBodyActionsName}";
 
-        var handColumn = mtmActionHand.Hand ?? "-";
         // Content
-        string jsonContent = $"{{" +
-                             $"\"Action\":\"{mtmActionHand.Name}\"," +
-                             $"\"Hand\":\"{handColumn}\"," +
-                             $"\"TMU\":{mtmActionHand.TMU}," +
-                             $"\"Depth\":{mtmActionHand.Depth}," +
-                             $"\"WorldX\":{(double)mtmActionHand.WorldPosition.x}," +
-                             $"\"WorldY\":{(double)mtmActionHand.WorldPosition.y}," +
-                             $"\"WorldZ\":{(double)mtmActionHand.WorldPosition.z}," +
-                             $"\"PartitionKey\":\"Transcription\"," +
-                             $"\"RowKey\":\"{mtmActionHand.ImageTitle}\"" +
-                             $"}}";
+        var jsonContent = $"{{" +
+                          $"\"TotalCount\":{action.TotalStepCount}," +
+                          $"\"LeftCount\":{action.LeftSideStepCount}," +
+                          $"\"RightCount\":{action.RightSideStepCount}," +
+                          $"\"UnknownCount\":{action.RightSideStepCount}," +
+                          $"\"TMUs\":{action.TMU}," +
+                          $"\"PartitionKey\":\"{User}\"," +
+                          $"\"RowKey\":\"Steps\"" +
+                          $"}}";
 
         var httpRequestMessage = SetUpHttpRequestMessage(tableUrl, jsonContent);
 
@@ -66,7 +83,70 @@ public class TableManager : MonoBehaviour
         }
         catch (Exception ex)
         {
-            //return $"Error {ex.Message}";
+            _message = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task InsertBendAndArise(BendAndAriseAction action)
+    {
+        var tableUrl = $"https://{StorageAccountName}.table.core.windows.net/{TableMtmBodyActionsName}";
+
+        // Content
+        var jsonContent = $"{{" +
+                          $"\"TotalCount\":\"{action.Total}\"," +
+                          $"\"TMUs\":{action.TMU}," +
+                          $"\"PartitionKey\":\"{User}\"," +
+                          $"\"RowKey\":\"BendAndArise\"" +
+                          $"}}";
+
+        var httpRequestMessage = SetUpHttpRequestMessage(tableUrl, jsonContent);
+
+        try
+        {
+            // Send the request.
+            using HttpResponseMessage httpResponseMessage = await new HttpClient().SendAsync(httpRequestMessage, CancellationToken.None);
+
+            // Check if the request was successful
+            httpResponseMessage.EnsureSuccessStatusCode();
+        }
+        catch (Exception ex)
+        {
+            _message = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task InsertMtmActionHandAsync(MtmActionHand mtmActionHand)
+    {
+        var tableUrl = $"https://{StorageAccountName}.table.core.windows.net/{TableMtmHandActionsName}";
+
+
+        var handColumn = mtmActionHand.Hand ?? "-";
+        // Content
+        var jsonContent = $"{{" +
+                          $"\"Action\":\"{mtmActionHand.Name}\"," +
+                          $"\"Hand\":\"{handColumn}\"," +
+                          $"\"TMU\":{mtmActionHand.TMU}," +
+                          $"\"Depth\":{mtmActionHand.Depth}," +
+                          $"\"WorldX\":{(double)mtmActionHand.WorldPosition.x}," +
+                          $"\"WorldY\":{(double)mtmActionHand.WorldPosition.y}," +
+                          $"\"WorldZ\":{(double)mtmActionHand.WorldPosition.z}," +
+                          $"\"PartitionKey\":\"Transcription\"," +
+                          $"\"RowKey\":\"{mtmActionHand.ImageTitle}\"" +
+                          $"}}";
+
+        var httpRequestMessage = SetUpHttpRequestMessage(tableUrl, jsonContent);
+
+        try
+        {
+            // Send the request.
+            using HttpResponseMessage httpResponseMessage = await new HttpClient().SendAsync(httpRequestMessage, CancellationToken.None);
+
+            // Check if the request was successful
+            httpResponseMessage.EnsureSuccessStatusCode();
+        }
+        catch (Exception ex)
+        {
+            _message = $"Error: {ex.Message}";
         }
     }
 
@@ -77,15 +157,15 @@ public class TableManager : MonoBehaviour
 
     private async Task InsertRuntimesAsync(WorkflowResultContainer workflowResultContainer, string imageName)
     {
-        string tableUrl = $"https://{storageAccountName}.table.core.windows.net/{tableRuntimesName}";
+        var tableUrl = $"https://{StorageAccountName}.table.core.windows.net/{TableRuntimesName}";
 
         // Content
-        string jsonContent = $"{{" +
-                             $"\"CustomVision\":\"{workflowResultContainer.RuntimeContainer.CustomVision}\"," +
-                             $"\"Total\":{workflowResultContainer.RuntimeContainer.Total}," +
-                             $"\"PartitionKey\":\"Detection\"," +
-                             $"\"RowKey\":\"{imageName}\"" +
-                             $"}}";
+        var jsonContent = $"{{" +
+                          $"\"CustomVision\":\"{workflowResultContainer.RuntimeContainer.CustomVision}\"," +
+                          $"\"Total\":{workflowResultContainer.RuntimeContainer.Total}," +
+                          $"\"PartitionKey\":\"Detection\"," +
+                          $"\"RowKey\":\"{imageName}\"" +
+                          $"}}";
 
         var httpRequestMessage = SetUpHttpRequestMessage(tableUrl, jsonContent);
 
@@ -99,7 +179,7 @@ public class TableManager : MonoBehaviour
         }
         catch (Exception ex)
         {
-            //return $"Error {ex.Message}";
+            _message = $"Error: {ex.Message}";
         }
     }
 
@@ -113,7 +193,7 @@ public class TableManager : MonoBehaviour
 
     private async Task InsertTagAsync(Tag tag, int tagIndex)
     {
-        string tableUrl = $"https://{storageAccountName}.table.core.windows.net/{tableTagsName}";
+        string tableUrl = $"https://{StorageAccountName}.table.core.windows.net/{TableTagsName}";
 
         // Content
         string jsonContent = $"{{" +
@@ -140,7 +220,7 @@ public class TableManager : MonoBehaviour
         }
         catch (Exception ex)
         {
-            //return $"Error {ex.Message}";
+            _message = $"Error: {ex.Message}";
         }
     }
 
@@ -165,7 +245,7 @@ public class TableManager : MonoBehaviour
         httpRequestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json"); // Set Content-Type header (optional, but recommended)
 
         // Add the authorization header.
-        httpRequestMessage.Headers.Authorization = AzureStorageAuthenticationHelper.GetTableAuthorizationHeader(storageAccountName, storageAccountKey, httpRequestMessage, date);
+        httpRequestMessage.Headers.Authorization = AzureStorageAuthenticationHelper.GetTableAuthorizationHeader(StorageAccountName, storageAccountKey, httpRequestMessage, date);
         return httpRequestMessage;
     }
 }

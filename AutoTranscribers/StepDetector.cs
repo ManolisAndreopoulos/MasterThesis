@@ -18,27 +18,33 @@ public class StepDetector : MonoBehaviour
      *  z -> Rotation (neck) to left direction
      */
 
-    public TextMeshPro DebuggingText = null; //assigned in Unity
+    public TextMeshPro StepDetectorOutputText = null; //assigned in Unity
     public Camera HololensCamera = null; //assigned in Unity
-    public string StepSide { get; private set; } = "unknown"; //"right", "left" or "unknown"
-    public bool Started { get; private set; }
 
+    [Header("Table Manager")]
+    public TableManager TableManager = null;
+
+    //Algorithm Thresholds
     private double StartVerticalVelocityThreshold = 0.035;
     private const int HeadTwistAngleThreshold = 5; //todo: change this based on experiments
     private  double MinimumHorizontalDisplacementInMeters = 0.05;
     private  double MaximumVerticalDisplacementInMeters = 0.1;
 
+    //Algorithm States
     private Vector3 _headPosition = Vector3.zero;
     private Vector3 _headOrthogonalPosition = Vector3.zero;
     private Vector3 _headEulerAngles = Vector3.zero;
     private Vector3 _headLinearVelocity = Vector3.zero;
-
     private Vector3 _headPositionAtStartOfStep = Vector3.zero;
     private Vector3 _headOrthogonalPositionAtStartOfStep = Vector3.zero;
+    private string _stepSide = "Unknown"; //"right", "left" or "unknown"
+    private bool _started;
 
+    //Counters
     private int _stepCount = 0;
-    private float _horizontalPlaneTravelDistanceForDebugging;
-    private float _verticalTravelDistanceForDebugging;
+    private int _leftSideStepCount = 0;
+    private int _rightSideStepCount = 0;
+    private int _unknownSideStepCount = 0;
 
     //Step Cycle stopwatch
     private Stopwatch _stopwatch;
@@ -46,12 +52,48 @@ public class StepDetector : MonoBehaviour
 
     private CameraToOrthogonalPosition _converter = new CameraToOrthogonalPosition();
 
+    private bool _toDetect = false;
+
+    public void Run()
+    {
+        _toDetect = true;
+    }
+
+    public void Stop()
+    {
+        _toDetect = false;
+        TableManager.StoreMtmAction(new StepAction(_leftSideStepCount, _rightSideStepCount, _unknownSideStepCount));
+        StepDetectorOutputText.text = $"Total: {_stepCount}\n"+
+                                      $"Left: {_leftSideStepCount}\n"+
+                                      $"Right: {_rightSideStepCount}\n"+
+                                      $"Unknown: {_unknownSideStepCount}";
+    }
+
+    #region Voice Commands for Tuning Of Algorithm Parameters
+
     public void ResetStepDetection()
     {
         _stepCount = 0;
-        Started = false;
-        _horizontalPlaneTravelDistanceForDebugging = 0;
-        _verticalTravelDistanceForDebugging = 0;
+        _started = false;
+    }
+
+
+    private string GetDebuggingText()
+    {
+        return $"Steps: {_stepCount}\n\n" +
+               //THRESHOLDS
+               $"Vel Thres:{StartVerticalVelocityThreshold}\n" +
+               $"Dist Thres:{MinimumHorizontalDisplacementInMeters}\n\n" +
+
+               //$"Velocity:\n" +
+               //$"x:{_headLinearVelocity.x:F2}, y:{_headLinearVelocity.y:F2}, z:{_headLinearVelocity.z:F2}\n" +
+               //$"Rotation:\n" +
+               //$"x:{_headEulerAngles.x:F1}, y:{_headEulerAngles.y:F1}, z:{_headEulerAngles.z:F1}\n" +
+               $"Orthogonal Position:\n" +
+               $"x:{_headOrthogonalPosition.x:F1}, y:{_headOrthogonalPosition.y:F1} , z: {_headOrthogonalPosition.z:F1}\n";
+        //$"VertTravel Dist:{_verticalTravelDistanceForDebugging}\n";
+        //$"Time Thres:{StepCycleTimeThresholdInMilliseconds}\n";
+        //$"Vertic Thres:{MaximumVerticalDisplacementInMeters}\n";
     }
 
     //public void IncreaseMaximumVerticalDisplacement()
@@ -84,6 +126,8 @@ public class StepDetector : MonoBehaviour
         StartVerticalVelocityThreshold -= 0.005;
     }
 
+    #endregion
+
     void FixedUpdate()
     {
         UpdateLinearVelocityOfHead();
@@ -94,27 +138,11 @@ public class StepDetector : MonoBehaviour
 
     void Update()
     {
-        CheckForAction();
-        DebuggingText.text = GetDebuggingText();
-    }
-
-    private string GetDebuggingText()
-    {
-        return $"Steps: {_stepCount}\n\n" +
-               //THRESHOLDS
-               $"Vel Thres:{StartVerticalVelocityThreshold}\n" +
-               $"Dist Thres:{MinimumHorizontalDisplacementInMeters}\n\n" +
-
-               //$"Velocity:\n" +
-               //$"x:{_headLinearVelocity.x:F2}, y:{_headLinearVelocity.y:F2}, z:{_headLinearVelocity.z:F2}\n" +
-               //$"Rotation:\n" +
-               //$"x:{_headEulerAngles.x:F1}, y:{_headEulerAngles.y:F1}, z:{_headEulerAngles.z:F1}\n" +
-               $"Orthogonal Position:\n" +
-               $"x:{_headOrthogonalPosition.x:F1}, y:{_headOrthogonalPosition.y:F1} , z: {_headOrthogonalPosition.z:F1}\n" +
-               //$"VertTravel Dist:{_verticalTravelDistanceForDebugging}\n";
-               $"Travel Distance:{_horizontalPlaneTravelDistanceForDebugging}\n";
-                //$"Time Thres:{StepCycleTimeThresholdInMilliseconds}\n";
-                //$"Vertic Thres:{MaximumVerticalDisplacementInMeters}\n";
+        if (_toDetect)
+        {
+            StepDetectorOutputText.text = $"Steps: {_stepCount}";
+            CheckForAction();
+        }
     }
 
     private void CheckForAction()
@@ -122,34 +150,42 @@ public class StepDetector : MonoBehaviour
         if (!CheckTimerHasPassed()) return;
 
         // Determine step start
-        if (!Started && Math.Abs(_headLinearVelocity.y) > StartVerticalVelocityThreshold)
+        if (!_started && Math.Abs(_headLinearVelocity.y) > StartVerticalVelocityThreshold)
         {
-            Started = true;
+            _started = true;
             _headPositionAtStartOfStep = _headPosition;
             _headOrthogonalPositionAtStartOfStep = _headOrthogonalPosition;
         }
 
         // Determine step side
         //todo: not used yet
-        if (Started && StepSide == "unknown")
-        {
-            if (_headEulerAngles.z > HeadTwistAngleThreshold)
-                StepSide = "left";
-            else if (_headEulerAngles.z < 360-HeadTwistAngleThreshold)
-                StepSide = "right";
-            else
-                StepSide = "unknown";
-        }
+        //if (_started)
+        //{
+        //    if (_headEulerAngles.z > HeadTwistAngleThreshold)
+        //    {
+        //        _stepSide = "Left";
+        //        _leftSideStepCount++;
+        //    }
+        //    else if (_headEulerAngles.z < 360 - HeadTwistAngleThreshold)
+        //    {
+        //        _stepSide = "Right";
+        //        _rightSideStepCount++;
+        //    }
+        //    else
+        //    {
+        //        _stepSide = "Unknown";
+        //        _unknownSideStepCount++;
+        //    }
+        //}
 
-        if (Started && Math.Abs(_headLinearVelocity.y) < StartVerticalVelocityThreshold)
+        if (_started && Math.Abs(_headLinearVelocity.y) < StartVerticalVelocityThreshold)
         {
-            Started = false;
+            _started = false;
 
             // Checking vertical displacement
             if (_headOrthogonalPositionAtStartOfStep != Vector3.zero)
             {
                 var verticalTravelDistance = _headOrthogonalPosition.y - _headOrthogonalPositionAtStartOfStep.y;
-                _verticalTravelDistanceForDebugging = verticalTravelDistance;
                 if (Math.Abs(verticalTravelDistance) > MaximumVerticalDisplacementInMeters)
                 {
                     // In case of big vertical displacement, we will not consider it as a step (might be bend and arise instead)
@@ -166,10 +202,25 @@ public class StepDetector : MonoBehaviour
                 var horizontalPlaneTravelDistance = Vector2.zero;
                 horizontalPlaneTravelDistance.x = _headPosition.x - _headPositionAtStartOfStep.x;
                 horizontalPlaneTravelDistance.y = _headPosition.z - _headPositionAtStartOfStep.z;
-                _horizontalPlaneTravelDistanceForDebugging = horizontalPlaneTravelDistance.magnitude;
                 if (horizontalPlaneTravelDistance.magnitude > MinimumHorizontalDisplacementInMeters)
                 {
-                    //todo: Transcribe step, otherwise discard
+                    //Transcribe step, otherwise discard
+                    if (_headEulerAngles.z > HeadTwistAngleThreshold)
+                    {
+                        _stepSide = "Left";
+                        _leftSideStepCount++;
+                    }
+                    else if (_headEulerAngles.z < 360 - HeadTwistAngleThreshold)
+                    {
+                        _stepSide = "Right";
+                        _rightSideStepCount++;
+                    }
+                    else
+                    {
+                        _stepSide = "Unknown";
+                        _unknownSideStepCount++;
+                    }
+
                     _stepCount++;
                 }
                 ResetTimer();
